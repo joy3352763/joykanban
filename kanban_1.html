@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>純前端看板 PoC - 擴充版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuedraggable@4.1.0/dist/vuedraggable.umd.min.js"></script>
+</head>
+<body class="bg-gray-50 h-screen p-8 font-sans overflow-hidden">
+    <div id="app" class="h-full flex flex-col relative">
+        <!-- 頂部操作區 -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">專案追蹤看板</h1>
+            <div class="space-x-3 flex items-center">
+                <span class="text-sm text-gray-500 mr-4">封存數量: {{ archivedTasks.length }}</span>
+                <input type="file" id="file-upload" class="hidden" @change="importJSON" accept=".json">
+                <button @click="triggerFileInput" class="px-4 py-2 bg-white text-gray-700 font-medium rounded-lg shadow border hover:bg-gray-50 transition">
+                    📂 匯入
+                </button>
+                <button @click="exportJSON" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition">
+                    💾 匯出備份
+                </button>
+            </div>
+        </div>
+
+        <!-- 看板主體 -->
+        <div class="flex space-x-6 overflow-x-auto pb-4 flex-1 items-start">
+            <div v-for="(column, colIndex) in columns" :key="column.id" class="bg-gray-100 rounded-xl p-4 w-[340px] flex-shrink-0 flex flex-col max-h-full">
+                <h2 class="font-bold text-gray-700 mb-4 px-1 flex justify-between">
+                    {{ column.name }} 
+                    <span class="text-gray-500 font-normal">{{ column.tasks.length }}</span>
+                </h2>
+
+                <draggable
+                    v-model="column.tasks"
+                    group="tasks"
+                    item-key="id"
+                    class="flex-1 space-y-3 min-h-[50px] overflow-y-auto pb-2"
+                    ghost-class="opacity-40"
+                    animation="200">
+                    <template #item="{ element, index }">
+                        <div @click="openEditModal(element, column, index)" 
+                             class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition group relative border-l-4"
+                             :class="element.isWatched ? 'border-l-yellow-400' : 'border-l-blue-500'">
+                            
+                            <!-- 標籤區 -->
+                            <div v-if="element.tags && element.tags.length" class="flex flex-wrap gap-1 mb-2">
+                                <span v-for="tag in element.tags" :key="tag" class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                                    {{ tag }}
+                                </span>
+                            </div>
+                            
+                            <!-- 標題 -->
+                            <p class="text-sm font-bold text-gray-800 mb-3">{{ element.title }}</p>
+                            
+                            <!-- 底部資訊列 (時戳、子任務進度、追蹤狀態) -->
+                            <div class="flex items-center text-xs text-gray-500 space-x-3">
+                                <span v-if="element.subtasks && element.subtasks.length > 0" class="flex items-center" title="子任務進度">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                                    {{ completedSubtasksCount(element) }}/{{ element.subtasks.length }}
+                                </span>
+                                <span v-if="element.dueDate" class="flex items-center" title="日期">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    {{ element.dueDate }}
+                                </span>
+                                <span v-if="element.isWatched" class="ml-auto text-yellow-500" title="已追蹤">
+                                    👁
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </draggable>
+
+                <button @click="addTask(column)" class="mt-3 p-2 text-sm text-gray-600 hover:bg-gray-200 rounded transition text-left flex items-center font-medium">
+                    <span class="mr-2 text-lg">+</span> Create new card
+                </button>
+            </div>
+        </div>
+
+        <!-- 編輯卡片的 Modal (覆蓋層) -->
+        <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div class="bg-white w-[500px] max-h-[90vh] rounded-xl shadow-2xl p-6 flex flex-col">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-xl font-bold">編輯卡片</h2>
+                    <button @click="closeModal" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+                </div>
+
+                <div class="overflow-y-auto pr-2 flex-1 space-y-4">
+                    <!-- 標題編輯 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
+                        <input v-model="editingCard.title" type="text" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 outline-none">
+                    </div>
+                    
+                    <!-- 日期設定 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">預計完成日 (時戳)</label>
+                        <input v-model="editingCard.dueDate" type="date" class="w-full border rounded-lg p-2 outline-none">
+                    </div>
+
+                    <!-- 標籤設定 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">標籤 (用半形逗號分隔)</label>
+                        <input :value="editingCard.tags.join(', ')" @input="updateTags($event.target.value)" type="text" placeholder="例: Design, Urgent, Q4" class="w-full border rounded-lg p-2 outline-none">
+                    </div>
+
+                    <!-- 子任務清單 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
+                            子任務清單
+                            <button @click="addSubtask" class="text-blue-600 hover:underline text-xs">+ 新增子任務</button>
+                        </label>
+                        <div class="space-y-2 mt-2">
+                            <div v-for="(subtask, sIdx) in editingCard.subtasks" :key="sIdx" class="flex items-center space-x-2">
+                                <input type="checkbox" v-model="subtask.done" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <input v-model="subtask.title" type="text" class="flex-1 border-b border-gray-200 px-1 py-0.5 outline-none text-sm focus:border-blue-500" placeholder="子任務內容">
+                                <button @click="editingCard.subtasks.splice(sIdx, 1)" class="text-red-400 hover:text-red-600 text-sm">✖</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 開關設定 -->
+                    <div class="flex items-center mt-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" v-model="editingCard.isWatched" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+                            <span class="ml-3 text-sm font-medium text-gray-700">追蹤此卡片 (Watch)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 底部按鈕區 -->
+                <div class="mt-6 pt-4 border-t flex justify-between">
+                    <button @click="archiveCurrentCard" class="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm transition">
+                        📥 封存卡片
+                    </button>
+                    <button @click="closeModal" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 shadow">
+                        完成
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, watch, onMounted } = Vue;
+        const draggable = window.vuedraggable;
+
+        const app = createApp({
+            components: { draggable },
+            setup() {
+                const STORAGE_KEY = 'kanban-pro-data';
+                
+                // 更豐富的預設資料 Schema
+                const defaultData = {
+                    columns: [
+                        { id: 'col-1', name: 'Backlog', tasks: [
+                            { id: 't1', title: 'Competitor research', tags: ['Research'], subtasks: [{title: 'Find 3 apps', done: true}, {title: 'Write report', done: false}], dueDate: '2026-09-15', isWatched: false }
+                        ]},
+                        { id: 'col-2', name: 'In Progress', tasks: [
+                            { id: 't3', title: 'Build the public API', tags: ['Backend', 'Urgent'], subtasks: [], dueDate: '2026-09-10', isWatched: true }
+                        ]},
+                        { id: 'col-3', name: 'Done', tasks: [] }
+                    ],
+                    archivedTasks: [] // 新增封存庫
+                };
+
+                const columns = ref([]);
+                const archivedTasks = ref([]);
+
+                // 初始化
+                onMounted(() => {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) {
+                        try {
+                            const parsed = JSON.parse(saved);
+                            columns.value = parsed.columns || defaultData.columns;
+                            archivedTasks.value = parsed.archivedTasks || [];
+                        } catch (e) {
+                            columns.value = defaultData.columns;
+                        }
+                    } else {
+                        columns.value = defaultData.columns;
+                        archivedTasks.value = defaultData.archivedTasks;
+                    }
+                });
+
+                // 自動存檔：監聽整個 Vue 資料結構
+                watch([columns, archivedTasks], () => {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                        columns: columns.value,
+                        archivedTasks: archivedTasks.value
+                    }));
+                }, { deep: true });
+
+                // 新增基礎卡片
+                const addTask = (column) => {
+                    column.tasks.push({
+                        id: 't-' + Date.now(),
+                        title: '新任務',
+                        tags: [],
+                        subtasks: [],
+                        dueDate: '',
+                        isWatched: false
+                    });
+                    // 新增後可直接觸發編輯，這裡先單純加入
+                };
+
+                // --- Modal 編輯邏輯 ---
+                const showModal = ref(false);
+                const editingCard = ref(null);
+                const currentColumn = ref(null);
+                const currentCardIndex = ref(null);
+
+                const openEditModal = (card, column, index) => {
+                    editingCard.value = card; // Vue 的響應式特性，修改 editingCard 會直接影響畫面
+                    currentColumn.value = column;
+                    currentCardIndex.value = index;
+                    showModal.value = true;
+                };
+
+                const closeModal = () => {
+                    showModal.value = false;
+                    editingCard.value = null;
+                };
+
+                // 處理標籤的逗號輸入轉陣列
+                const updateTags = (val) => {
+                    editingCard.value.tags = val.split(',').map(t => t.trim()).filter(t => t);
+                };
+
+                const addSubtask = () => {
+                    if (!editingCard.value.subtasks) editingCard.value.subtasks = [];
+                    editingCard.value.subtasks.push({ title: '', done: false });
+                };
+
+                const completedSubtasksCount = (card) => {
+                    if (!card.subtasks) return 0;
+                    return card.subtasks.filter(s => s.done).length;
+                };
+
+                // 封存卡片：從原本的欄位中抽出，塞入封存陣列
+                const archiveCurrentCard = () => {
+                    if (confirm('確定要封存此卡片嗎？它將從看板上隱藏。')) {
+                        const [removed] = currentColumn.value.tasks.splice(currentCardIndex.value, 1);
+                        archivedTasks.value.push(removed);
+                        closeModal();
+                    }
+                };
+
+                // --- 匯出 / 匯入邏輯更新 ---
+                const exportJSON = () => {
+                    const dataStr = JSON.stringify({ columns: columns.value, archivedTasks: archivedTasks.value }, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `kanban-data-${new Date().toISOString().slice(0,10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                };
+
+                const triggerFileInput = () => document.getElementById('file-upload').click();
+
+                const importJSON = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            columns.value = importedData.columns || [];
+                            archivedTasks.value = importedData.archivedTasks || [];
+                            alert('匯入成功！');
+                        } catch (error) {
+                            alert('JSON 格式錯誤，匯入失敗。');
+                        }
+                        event.target.value = '';
+                    };
+                    reader.readAsText(file);
+                };
+
+                return {
+                    columns, archivedTasks, addTask,
+                    showModal, editingCard, openEditModal, closeModal,
+                    updateTags, addSubtask, completedSubtasksCount, archiveCurrentCard,
+                    exportJSON, triggerFileInput, importJSON
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
