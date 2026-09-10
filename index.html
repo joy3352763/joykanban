@@ -3,19 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>純前端看板 PoC - 循環任務版</title>
+    <title>純前端看板 - 動態設定版</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- SortableJS & VueDraggable -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuedraggable@4.1.0/dist/vuedraggable.umd.min.js"></script>
 </head>
 <body class="bg-gray-50 h-screen p-8 font-sans overflow-hidden">
     <div id="app" class="h-full flex flex-col relative">
+        
         <!-- 頂部操作區 -->
         <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">專案追蹤看板</h1>
+            <div class="flex flex-col">
+                <h1 class="text-3xl font-bold text-gray-800">專案追蹤看板</h1>
+                <span class="text-sm text-gray-500 mt-1">目前操作者：{{ boardOwner }}</span>
+            </div>
+            
             <div class="space-x-3 flex items-center">
-                <span class="text-sm text-gray-500 mr-4">封存數量: {{ archivedTasks.length }}</span>
+                <button @click="showArchiveModal = true" class="text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-lg transition flex items-center mr-2">
+                    🗄️ 封存庫 ({{ archivedTasks.length }})
+                </button>
+                
+                <button @click="copyToObsidian" class="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg shadow hover:bg-purple-700 transition flex items-center">
+                    📋 複製為 Obsidian
+                </button>
+                
+                <button @click="showSettingsModal = true" class="px-3 py-2 bg-gray-700 text-white font-medium rounded-lg shadow hover:bg-gray-800 transition flex items-center">
+                    ⚙️ 設定
+                </button>
+
                 <input type="file" id="file-upload" class="hidden" @change="importJSON" accept=".json">
                 <button @click="triggerFileInput" class="px-4 py-2 bg-white text-gray-700 font-medium rounded-lg shadow border hover:bg-gray-50 transition">
                     📂 匯入
@@ -34,7 +53,6 @@
                     <span class="text-gray-500 font-normal">{{ column.tasks.length }}</span>
                 </h2>
 
-                <!-- 加上 @change 監聽拖曳事件 -->
                 <draggable
                     v-model="column.tasks"
                     group="tasks"
@@ -44,7 +62,6 @@
                     ghost-class="opacity-40"
                     animation="200">
                     
-                    <!-- 警告：此處內部嚴禁放置 HTML 註解 -->
                     <template #item="{ element, index }">
                         <div @click="openEditModal(element, column, index)" 
                              class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition group relative border-l-4"
@@ -56,12 +73,17 @@
                                 </span>
                             </div>
                             
-                            <!-- 標題與循環圖示 -->
-                            <p class="text-sm font-bold text-gray-800 mb-3 flex items-center">
+                            <p class="text-sm font-bold text-gray-800 mb-2 flex items-center">
                                 <span v-if="element.recurrence && element.recurrence !== 'none'" class="mr-1 text-blue-500" title="循環任務">🔁</span>
                                 {{ element.title }}
                             </p>
                             
+                            <div v-if="element.isCollaborative" class="mb-3">
+                                <span class="inline-block bg-indigo-100 text-indigo-800 text-[10px] px-2 py-1 rounded font-bold tracking-wider">
+                                    {{ element.projectCode || '未定代碼' }}
+                                </span>
+                            </div>
+
                             <div class="flex items-center text-xs text-gray-500 space-x-3">
                                 <span v-if="element.subtasks && element.subtasks.length > 0" class="flex items-center" title="子任務進度">
                                     <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
@@ -71,9 +93,7 @@
                                     <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                     {{ element.dueDate }}
                                 </span>
-                                <span v-if="element.isWatched" class="ml-auto text-yellow-500" title="已追蹤">
-                                    👁
-                                </span>
+                                <span v-if="element.isWatched" class="ml-auto text-yellow-500" title="已追蹤">👁</span>
                             </div>
                         </div>
                     </template>
@@ -85,33 +105,62 @@
             </div>
         </div>
 
-        <!-- 編輯卡片的 Modal -->
-        <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div class="bg-white w-[550px] max-h-[90vh] rounded-xl shadow-2xl p-6 flex flex-col">
-                <div class="flex justify-between items-start mb-4">
+        <!-- 編輯卡片 Modal -->
+        <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div class="bg-white w-[600px] max-h-[90vh] rounded-xl shadow-2xl p-6 flex flex-col">
+                <div class="flex justify-between items-start mb-4 border-b pb-3">
                     <h2 class="text-xl font-bold">編輯卡片</h2>
-                    <button @click="closeModal" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+                    <button @click="closeEditModal" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
                 </div>
 
                 <div class="overflow-y-auto pr-2 flex-1 space-y-4">
-                    <!-- 基本設定 -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">任務名稱</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">任務名稱 (Obsidian 筆記名稱)</label>
                         <input v-model="editingCard.title" type="text" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 outline-none">
                     </div>
                     
                     <div class="flex space-x-4">
                         <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">預計完成日 (時戳)</label>
-                            <input v-model="editingCard.dueDate" type="date" class="w-full border rounded-lg p-2 outline-none">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">預計完成日</label>
+                            <input v-model="editingCard.dueDate" type="date" class="w-full border rounded-lg p-2 outline-none text-sm">
                         </div>
                         <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">標籤 (用半形逗號分隔)</label>
-                            <input :value="editingCard.tags.join(', ')" @input="updateTags($event.target.value)" type="text" placeholder="例: Design, Q4" class="w-full border rounded-lg p-2 outline-none">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">標籤 (半形逗號分隔)</label>
+                            <input v-model="tempTagsString" @input="syncTags" type="text" placeholder="例: Dev, Q4" class="w-full border rounded-lg p-2 outline-none text-sm">
                         </div>
                     </div>
 
-                    <!-- 子任務清單 -->
+                    <!-- 團隊協作設定區塊 -->
+                    <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mt-4">
+                        <label class="flex items-center cursor-pointer mb-3">
+                            <input type="checkbox" v-model="editingCard.isCollaborative" class="mr-2 accent-indigo-600 w-4 h-4">
+                            <span class="text-sm font-bold text-indigo-800">🤝 團隊協作專案</span>
+                        </label>
+
+                        <div v-if="editingCard.isCollaborative" class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">專案代碼 (作為合併鍵值，例: PROJ-01)</label>
+                                <input v-model="editingCard.projectCode" type="text" placeholder="輸入唯一的全域代碼" class="w-full border rounded-lg p-2 outline-none text-sm uppercase">
+                            </div>
+                            <div class="flex space-x-4">
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">主責人員</label>
+                                    <select v-model="editingCard.primaryOwner" class="w-full border rounded-lg p-2 outline-none text-sm bg-white">
+                                        <option value="">請選擇</option>
+                                        <option v-for="member in teamMembers" :key="member" :value="member">{{ member }}</option>
+                                    </select>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">備援人員</label>
+                                    <select v-model="editingCard.backupOwner" class="w-full border rounded-lg p-2 outline-none text-sm bg-white">
+                                        <option value="">無</option>
+                                        <option v-for="member in teamMembers" :key="member" :value="member">{{ member }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
                             子任務清單
@@ -126,16 +175,13 @@
                         </div>
                     </div>
 
-                    <!-- 新增：循環設定區塊 -->
                     <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mt-4">
-                        <label class="block text-sm font-bold text-blue-800 mb-2 flex items-center">
-                            🔁 循環設定
-                        </label>
-                        <select v-model="editingCard.recurrence" class="w-full border rounded-lg p-2 outline-none mb-3 text-sm">
+                        <label class="block text-sm font-bold text-blue-800 mb-2 flex items-center">🔁 循環設定</label>
+                        <select v-model="editingCard.recurrence" class="w-full border rounded-lg p-2 outline-none mb-3 text-sm bg-white">
                             <option value="none">不循環</option>
-                            <option value="daily">每天 (Daily)</option>
-                            <option value="weekly">每週 (Weekly)</option>
-                            <option value="monthly">每月 (Monthly)</option>
+                            <option value="daily">每天</option>
+                            <option value="weekly">每週</option>
+                            <option value="monthly">每月</option>
                         </select>
 
                         <div v-if="editingCard.recurrence !== 'none'" class="space-y-3">
@@ -145,12 +191,7 @@
                                 <label class="flex items-center"><input type="radio" v-model="editingCard.recurEndType" value="date" class="mr-1"> 依日期</label>
                                 <label class="flex items-center"><input type="radio" v-model="editingCard.recurEndType" value="count" class="mr-1"> 依次數</label>
                             </div>
-
-                            <input v-if="editingCard.recurEndType === 'date'" 
-                                   v-model="editingCard.recurEndDate" 
-                                   type="date" 
-                                   class="w-full border rounded-lg p-2 outline-none text-sm">
-                                   
+                            <input v-if="editingCard.recurEndType === 'date'" v-model="editingCard.recurEndDate" type="date" class="w-full border rounded-lg p-2 outline-none text-sm">
                             <div v-if="editingCard.recurEndType === 'count'" class="flex items-center text-sm">
                                 <span class="mr-2">總共循環</span>
                                 <input v-model.number="editingCard.recurEndCount" type="number" min="1" class="w-20 border rounded-lg p-1 outline-none text-center">
@@ -159,8 +200,7 @@
                         </div>
                     </div>
                     
-                    <!-- 開關設定 -->
-                    <div class="flex items-center mt-4">
+                    <div class="flex items-center mt-4 pb-4">
                         <label class="flex items-center cursor-pointer">
                             <input type="checkbox" v-model="editingCard.isWatched" class="sr-only peer">
                             <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
@@ -169,13 +209,82 @@
                     </div>
                 </div>
 
-                <div class="mt-6 pt-4 border-t flex justify-between">
-                    <button @click="archiveCurrentCard" class="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm transition">
-                        📥 封存卡片
-                    </button>
-                    <button @click="closeModal" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 shadow">
+                <div class="mt-4 pt-4 border-t flex justify-between bg-white items-center">
+                    <div class="space-x-2">
+                        <button @click="archiveCurrentCard" class="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm transition font-medium border border-red-200">
+                            📥 封存
+                        </button>
+                        <!-- 新增：單張匯出按鈕 -->
+                        <button @click="exportSingleCard" class="text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg text-sm transition font-medium border border-indigo-200">
+                            📤 匯出此卡片
+                        </button>
+                    </div>
+                    <button @click="closeEditModal" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 shadow font-medium">
                         完成
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 封存庫 Modal -->
+        <div v-if="showArchiveModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div class="bg-white w-[600px] max-h-[80vh] rounded-xl shadow-2xl p-6 flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h2 class="text-xl font-bold">🗄️ 封存庫</h2>
+                    <button @click="showArchiveModal = false" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+                </div>
+                <div class="overflow-y-auto flex-1">
+                    <div v-if="archivedTasks.length === 0" class="text-center text-gray-400 py-10">目前沒有已封存的卡片</div>
+                    <ul class="space-y-3">
+                        <li v-for="(task, index) in archivedTasks" :key="task.id" class="bg-gray-50 border rounded-lg p-3 flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold text-gray-800">{{ task.title }}</p>
+                                <p class="text-xs text-gray-500">預計日期: {{ task.dueDate || '無' }}</p>
+                            </div>
+                            <div class="space-x-2">
+                                <button @click="restoreTask(index)" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">🔄 還原</button>
+                                <button @click="deleteArchivedTask(index)" class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">🗑️ 刪除</button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系統設定 Modal -->
+        <div v-if="showSettingsModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div class="bg-white w-[400px] rounded-xl shadow-2xl p-6 flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h2 class="text-xl font-bold">⚙️ 系統設定</h2>
+                    <button @click="showSettingsModal = false" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+                </div>
+                
+                <div class="space-y-6 py-2 overflow-y-auto max-h-[60vh]">
+                    <!-- 看板擁有者設定 (文字輸入) -->
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <h3 class="text-sm font-bold text-blue-800 mb-1">看板擁有者 (Board Owner)</h3>
+                        <input v-model="boardOwner" type="text" class="w-full border rounded-lg p-2 outline-none mb-1 text-sm bg-white">
+                        <p class="text-xs text-red-500 font-medium leading-tight">⚠️ 警告：設定後請勿隨意更改，否則你的卡片將無法正確與主管端同步。</p>
+                    </div>
+                    
+                    <!-- 團隊名單設定 (文字區塊) -->
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-700 mb-1">團隊名單 (半形逗號分隔)</h3>
+                        <textarea v-model="teamMembersStr" @input="updateTeamMembers" rows="3" class="w-full border rounded-lg p-2 outline-none text-sm leading-relaxed" placeholder="王小明,陳小芳,李大仁"></textarea>
+                        <p class="text-xs text-gray-500 mt-1 leading-tight">人員異動時請統一修改此字串，它會自動更新所有下拉選單的選項。</p>
+                    </div>
+
+                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+                        <span class="font-medium text-gray-700">系統版號</span>
+                        <span class="bg-gray-200 text-gray-800 text-sm font-mono px-2 py-1 rounded">{{ systemVersion }}</span>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-500 mb-2">資料管理</h3>
+                        <button @click="clearAllData" class="w-full text-left text-sm text-red-600 hover:bg-red-50 border border-red-200 p-3 rounded-lg transition">
+                            ⚠️ 清空本地端所有資料
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -188,18 +297,20 @@
         const app = createApp({
             components: { draggable },
             setup() {
-                const STORAGE_KEY = 'kanban-recur-data'; // 更新 Key 避免干擾
+                const STORAGE_KEY = 'kanban-team-v1-data';
+                const systemVersion = ref('v1.4.0'); 
+                
+                // 動態團隊名單與看板擁有者
+                const teamMembers = ref(['王小明', '陳小芳', '李大仁', '張大明', '林小華', '黃小翠']);
+                const teamMembersStr = ref(teamMembers.value.join(', '));
+                const boardOwner = ref('王小明');
                 
                 const defaultData = {
+                    boardOwner: '王小明',
+                    teamMembers: ['王小明', '陳小芳', '李大仁', '張大明', '林小華', '黃小翠'],
                     columns: [
-                        { id: 'col-1', name: 'Backlog', tasks: [
-                            { 
-                                id: 't1', title: '每日系統檢查', tags: ['Routine'], subtasks: [{title: 'Check logs', done: false}], 
-                                dueDate: '2026-09-10', isWatched: false,
-                                recurrence: 'daily', hasSpawned: false, recurEndType: 'never', recurEndDate: '', recurEndCount: 10, currentSpawnCount: 0
-                            }
-                        ]},
-                        { id: 'col-2', name: 'In Progress', tasks: []},
+                        { id: 'col-1', name: 'Backlog', tasks: [] },
+                        { id: 'col-2', name: 'In Progress', tasks: [] },
                         { id: 'col-3', name: 'Done', tasks: [] }
                     ],
                     archivedTasks: []
@@ -208,28 +319,61 @@
                 const columns = ref([]);
                 const archivedTasks = ref([]);
 
+                const showEditModal = ref(false);
+                const showArchiveModal = ref(false);
+                const showSettingsModal = ref(false);
+                // 匯出單張卡片
+                const exportSingleCard = () => {
+                    const cardData = JSON.stringify(editingCard.value, null, 2);
+                    const blob = new Blob([cardData], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    // 檔名優先使用專案代碼，若無則用標題
+                    const fileName = editingCard.value.projectCode 
+                        ? `card-${editingCard.value.projectCode}.json` 
+                        : `card-${editingCard.value.title}.json`;
+                    a.download = fileName;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                };
+                
                 onMounted(() => {
                     const saved = localStorage.getItem(STORAGE_KEY);
                     if (saved) {
                         try {
                             const parsed = JSON.parse(saved);
+                            boardOwner.value = parsed.boardOwner || '未命名使用者';
+                            teamMembers.value = parsed.teamMembers || defaultData.teamMembers;
+                            teamMembersStr.value = teamMembers.value.join(', ');
                             columns.value = parsed.columns || defaultData.columns;
                             archivedTasks.value = parsed.archivedTasks || [];
                         } catch (e) {
+                            boardOwner.value = defaultData.boardOwner;
+                            teamMembers.value = defaultData.teamMembers;
                             columns.value = defaultData.columns;
                         }
                     } else {
+                        boardOwner.value = defaultData.boardOwner;
+                        teamMembers.value = defaultData.teamMembers;
                         columns.value = defaultData.columns;
                         archivedTasks.value = defaultData.archivedTasks;
                     }
                 });
 
-                watch([columns, archivedTasks], () => {
+                // 深度監聽並自動存檔所有動態變數
+                watch([boardOwner, teamMembers, columns, archivedTasks], () => {
                     localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                        boardOwner: boardOwner.value,
+                        teamMembers: teamMembers.value,
                         columns: columns.value,
                         archivedTasks: archivedTasks.value
                     }));
                 }, { deep: true });
+
+                const updateTeamMembers = () => {
+                    teamMembers.value = teamMembersStr.value.split(',').map(m => m.trim()).filter(m => m);
+                };
 
                 const addTask = (column) => {
                     column.tasks.push({
@@ -244,39 +388,34 @@
                         recurEndType: 'never',
                         recurEndDate: '',
                         recurEndCount: 5,
-                        currentSpawnCount: 0
+                        currentSpawnCount: 0,
+                        isCollaborative: false,
+                        projectCode: '',
+                        primaryOwner: '',
+                        backupOwner: ''
                     });
                 };
 
-                // --- 新增：監聽拖曳事件與重生邏輯 ---
                 const onColumnChange = (evt, column) => {
-                    // 如果有卡片被「移入」，且該欄位名稱是 'Done'
                     if (evt.added && column.name === 'Done') {
                         const task = evt.added.element;
-                        
-                        // 檢查是否需要重生
                         if (task.recurrence && task.recurrence !== 'none' && !task.hasSpawned) {
                             spawnNextRecurringTask(task);
-                            task.hasSpawned = true; // 標記為已衍生，防止重複觸發
+                            task.hasSpawned = true;
                         }
                     }
                 };
 
                 const spawnNextRecurringTask = (completedTask) => {
-                    // 1. 深拷貝
                     const newTask = JSON.parse(JSON.stringify(completedTask));
-                    
-                    // 2. 初始化新卡片屬性
                     newTask.id = 't-' + Date.now();
                     newTask.hasSpawned = false;
                     newTask.currentSpawnCount = (newTask.currentSpawnCount || 0) + 1;
                     
-                    // 3. 重置子任務
                     if (newTask.subtasks) {
                         newTask.subtasks.forEach(st => st.done = false);
                     }
                     
-                    // 4. 計算下一次日期
                     let nextDate = null;
                     if (newTask.dueDate) {
                         const date = new Date(newTask.dueDate);
@@ -288,7 +427,6 @@
                         nextDate = date.toISOString().slice(0, 10);
                     }
 
-                    // 5. 檢查結束條件
                     if (newTask.recurEndType === 'date' && newTask.recurEndDate && nextDate) {
                         if (new Date(nextDate) > new Date(newTask.recurEndDate)) return;
                     }
@@ -296,31 +434,30 @@
                         if (newTask.currentSpawnCount >= newTask.recurEndCount) return;
                     }
 
-                    // 6. 更新日期並推入 Backlog (即 columns 的第一欄)
                     newTask.dueDate = nextDate;
                     columns.value[0].tasks.push(newTask);
                 };
 
-                // --- Modal 邏輯 ---
-                const showModal = ref(false);
                 const editingCard = ref(null);
                 const currentColumn = ref(null);
                 const currentCardIndex = ref(null);
+                const tempTagsString = ref('');
 
                 const openEditModal = (card, column, index) => {
                     editingCard.value = card;
                     currentColumn.value = column;
                     currentCardIndex.value = index;
-                    showModal.value = true;
+                    tempTagsString.value = card.tags ? card.tags.join(', ') : '';
+                    showEditModal.value = true;
                 };
 
-                const closeModal = () => {
-                    showModal.value = false;
+                const closeEditModal = () => {
+                    showEditModal.value = false;
                     editingCard.value = null;
                 };
 
-                const updateTags = (val) => {
-                    editingCard.value.tags = val.split(',').map(t => t.trim()).filter(t => t);
+                const syncTags = () => {
+                    editingCard.value.tags = tempTagsString.value.split(',').map(t => t.trim()).filter(t => t);
                 };
 
                 const addSubtask = () => {
@@ -337,18 +474,41 @@
                     if (confirm('確定要封存此卡片嗎？')) {
                         const [removed] = currentColumn.value.tasks.splice(currentCardIndex.value, 1);
                         archivedTasks.value.push(removed);
-                        closeModal();
+                        closeEditModal();
                     }
                 };
 
-                // --- 匯出 / 匯入邏輯 ---
+                const restoreTask = (index) => {
+                    const task = archivedTasks.value.splice(index, 1)[0];
+                    columns.value[0].tasks.push(task); 
+                };
+
+                const deleteArchivedTask = (index) => {
+                    if (confirm('永久刪除後將無法復原，確定要刪除嗎？')) {
+                        archivedTasks.value.splice(index, 1);
+                    }
+                };
+
+                const clearAllData = () => {
+                    if (confirm('確定要清空所有資料嗎？')) {
+                        localStorage.removeItem(STORAGE_KEY);
+                        location.reload();
+                    }
+                };
+
                 const exportJSON = () => {
-                    const dataStr = JSON.stringify({ columns: columns.value, archivedTasks: archivedTasks.value }, null, 2);
+                    // 確保匯出的 JSON 包含設定資訊
+                    const dataStr = JSON.stringify({ 
+                        boardOwner: boardOwner.value,
+                        teamMembers: teamMembers.value,
+                        columns: columns.value, 
+                        archivedTasks: archivedTasks.value 
+                    }, null, 2);
                     const blob = new Blob([dataStr], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `kanban-data-${new Date().toISOString().slice(0,10)}.json`;
+                    a.download = `kanban-${boardOwner.value}-${new Date().toISOString().slice(0,10)}.json`;
                     a.click();
                     URL.revokeObjectURL(url);
                 };
@@ -361,24 +521,115 @@
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         try {
-                            const importedData = JSON.parse(e.target.result);
-                            columns.value = importedData.columns || [];
-                            archivedTasks.value = importedData.archivedTasks || [];
-                            alert('匯入成功！');
+                            const parsed = JSON.parse(e.target.result);
+                            
+                            // 【判斷一】這是完整的看板備份檔
+                            if (parsed.columns) {
+                                boardOwner.value = parsed.boardOwner || boardOwner.value;
+                                teamMembers.value = parsed.teamMembers || teamMembers.value;
+                                teamMembersStr.value = teamMembers.value.join(', ');
+                                columns.value = parsed.columns || [];
+                                archivedTasks.value = parsed.archivedTasks || [];
+                                alert('✅ 完整看板匯入成功！');
+                            } 
+                            // 【判斷二】這是一張單獨的卡片
+                            else if (parsed.title !== undefined) {
+                                importSingleCardLogic(parsed);
+                            } 
+                            else {
+                                alert('❌ 無法識別的檔案格式！');
+                            }
                         } catch (error) {
-                            alert('JSON 格式錯誤，匯入失敗。');
+                            alert('❌ JSON 格式錯誤，匯入失敗。');
                         }
-                        event.target.value = '';
+                        event.target.value = ''; // 清空 input
                     };
                     reader.readAsText(file);
                 };
 
+                // 單張卡片匯入的具體處理邏輯
+                const importSingleCardLogic = (newCard) => {
+                    let foundCol = null;
+                    let foundIdx = -1;
+
+                    // 1. 尋找是否已有相同專案代碼 (或相同系統 ID) 的卡片
+                    for (let c of columns.value) {
+                        const idx = c.tasks.findIndex(t => 
+                            (newCard.isCollaborative && newCard.projectCode && t.projectCode && t.projectCode.toUpperCase() === newCard.projectCode.toUpperCase()) || 
+                            t.id === newCard.id
+                        );
+                        if (idx !== -1) {
+                            foundCol = c;
+                            foundIdx = idx;
+                            break;
+                        }
+                    }
+
+                    // 2. 執行覆蓋或新增
+                    if (foundCol) {
+                        const existingCard = foundCol.tasks[foundIdx];
+                        if (confirm(`發現看板中已有此專案卡片「${existingCard.title}」。\n是否要以匯入的檔案【覆蓋更新】它？\n(放心，它將會保留在目前的看板欄位中)`)) {
+                            // 核心防呆：保留原有的系統 ID，但替換所有內容
+                            const safeId = existingCard.id;
+                            foundCol.tasks[foundIdx] = { ...newCard, id: safeId };
+                            alert('✅ 卡片已成功覆蓋更新！');
+                        }
+                    } else {
+                        // 完全是一張新卡片：賦予全新系統 ID 避免衝突，並塞入 Backlog
+                        newCard.id = 't-' + Date.now();
+                        columns.value[0].tasks.push(newCard);
+                        alert('✅ 已將新卡片匯入至 Backlog！');
+                    }
+                };
+
+                const copyToObsidian = async () => {
+                    let markdown = "";
+                    const today = new Date().toISOString().slice(0,10);
+                    
+                    columns.value.forEach(col => {
+                        if (col.tasks.length === 0) return;
+                        markdown += `### ${col.name}\n\n`;
+                        
+                        col.tasks.forEach(task => {
+                            const isDone = col.name === 'Done';
+                            const checkbox = isDone ? '- [x]' : '- [ ]';
+                            let parts = [checkbox, `[[${task.title}]]`];
+                            
+                            if (task.tags && task.tags.length > 0) parts.push(task.tags.map(t => `#${t}`).join(' '));
+                            if (task.dueDate) parts.push(`[due:: ${task.dueDate}]`);
+                            if (isDone) parts.push(`[completion:: ${today}]`);
+                            
+                            markdown += parts.join(' ') + '\n';
+                            
+                            if (task.subtasks && task.subtasks.length > 0) {
+                                task.subtasks.forEach(sub => {
+                                    const subCheckbox = sub.done || isDone ? '- [x]' : '- [ ]';
+                                    markdown += `    ${subCheckbox} ${sub.title}\n`;
+                                });
+                            }
+                        });
+                        markdown += '\n'; 
+                    });
+                    
+                    try {
+                        await navigator.clipboard.writeText(markdown);
+                        alert('已複製 Obsidian Markdown 格式！');
+                    } catch (err) {
+                        alert('複製失敗，請檢查權限。');
+                    }
+                };
+
                 return {
+                    systemVersion, 
+                    teamMembers, teamMembersStr, updateTeamMembers, 
+                    boardOwner,
                     columns, archivedTasks, addTask,
-                    showModal, editingCard, openEditModal, closeModal,
-                    updateTags, addSubtask, completedSubtasksCount, archiveCurrentCard,
-                    exportJSON, triggerFileInput, importJSON,
-                    onColumnChange
+                    showEditModal, showArchiveModal, showSettingsModal, 
+                    editingCard, openEditModal, closeEditModal,
+                    tempTagsString, syncTags, addSubtask, completedSubtasksCount, archiveCurrentCard,
+                    restoreTask, deleteArchivedTask, clearAllData,
+                    exportJSON, triggerFileInput, importJSON,exportSingleCard,
+                    onColumnChange, copyToObsidian
                 };
             }
         });
@@ -387,3 +638,5 @@
     </script>
 </body>
 </html>
+
+Read Frog
