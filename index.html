@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>JoyKanban</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,59 +12,63 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuedraggable@4.1.0/dist/vuedraggable.umd.min.js"></script>
 </head>
-<body class="bg-gray-50 h-screen p-8 font-sans overflow-hidden">
+<body class="bg-gray-50 h-screen p-3 sm:p-8 font-sans overflow-hidden">
     <div id="app" class="h-full flex flex-col relative">
         
-        <!-- 頂部操作區 -->
-        <div class="flex justify-between items-center mb-8">
+        <!-- 頂部操作區 (RWD 自動換行適應) -->
+        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-4 sm:mb-8 gap-4">
             <div class="flex flex-col">
-                <h1 class="text-3xl font-bold text-gray-800">專案追蹤看板</h1>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">專案追蹤看板</h1>
                 <span class="text-sm text-gray-500 mt-1">目前操作者：{{ boardOwner }}</span>
             </div>
             
-            <div class="space-x-3 flex items-center">
-                <button @click="showArchiveModal = true" class="text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-lg transition flex items-center mr-2">
+            <!-- 按鈕區使用 flex-wrap 讓手機螢幕自動折行 -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button @click="showArchiveModal = true" class="text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-lg transition flex items-center">
                     🗄️ 封存庫 ({{ archivedTasks.length }})
                 </button>
                 
-                <button @click="copyToObsidian" class="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg shadow hover:bg-purple-700 transition flex items-center">
+                <button @click="copyToObsidian" class="px-3 sm:px-4 py-2 bg-purple-600 text-white font-medium rounded-lg shadow hover:bg-purple-700 transition flex items-center text-sm sm:text-base">
                     📋 複製為 Obsidian
                 </button>
                 
-                <button @click="showSettingsModal = true" class="px-3 py-2 bg-gray-700 text-white font-medium rounded-lg shadow hover:bg-gray-800 transition flex items-center">
+                <button @click="showSettingsModal = true" class="px-3 py-2 bg-gray-700 text-white font-medium rounded-lg shadow hover:bg-gray-800 transition flex items-center text-sm sm:text-base">
                     ⚙️ 設定
                 </button>
 
                 <input type="file" id="file-upload" class="hidden" @change="importJSON" accept=".json">
-                <button @click="triggerFileInput" class="px-4 py-2 bg-white text-gray-700 font-medium rounded-lg shadow border hover:bg-gray-50 transition">
+                <button @click="triggerFileInput" class="px-3 sm:px-4 py-2 bg-white text-gray-700 font-medium rounded-lg shadow border hover:bg-gray-50 transition text-sm sm:text-base">
                     📂 匯入
                 </button>
-                <button @click="exportJSON" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition">
+                <button @click="exportJSON" class="px-3 sm:px-4 py-2 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition text-sm sm:text-base">
                     💾 匯出備份
                 </button>
             </div>
         </div>
 
-        <!-- 看板主體 -->
-        <div class="flex space-x-6 overflow-x-auto pb-4 flex-1 items-start">
-            <div v-for="(column, colIndex) in columns" :key="column.id" class="bg-gray-100 rounded-xl p-4 w-[340px] flex-shrink-0 flex flex-col max-h-full">
+        <!-- 看板主體 (橫向捲動相容手機) -->
+        <div class="flex gap-4 sm:gap-6 overflow-x-auto pb-4 flex-1 items-start">
+            <div v-for="(column, colIndex) in columns" :key="column.id" class="bg-gray-100 rounded-xl p-3 sm:p-4 w-[280px] sm:w-[340px] flex-shrink-0 flex flex-col max-h-full">
                 <h2 class="font-bold text-gray-700 mb-4 px-1 flex justify-between">
                     {{ column.name }} 
                     <span class="text-gray-500 font-normal">{{ column.tasks.length }}</span>
                 </h2>
 
+                <!-- 關鍵：加入 :delay="200" :delayOnTouchOnly="true" 解決手機滑動衝突 -->
                 <draggable
                     v-model="column.tasks"
                     group="tasks"
                     item-key="id"
                     @change="(evt) => onColumnChange(evt, column)"
+                    :delay="200"
+                    :delayOnTouchOnly="true"
                     class="flex-1 space-y-3 min-h-[50px] overflow-y-auto pb-2"
                     ghost-class="opacity-40"
                     animation="200">
                     
                     <template #item="{ element, index }">
                         <div @click="openEditModal(element, column, index)" 
-                             class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition group relative border-l-4"
+                             class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition group relative border-l-4"
                              :class="element.isWatched ? 'border-l-yellow-400' : 'border-l-blue-500'">
                             
                             <div v-if="element.tags && element.tags.length" class="flex flex-wrap gap-1 mb-2">
@@ -86,7 +90,7 @@
 
                             <div class="flex items-center text-xs text-gray-500 space-x-3">
                                 <span v-if="element.subtasks && element.subtasks.length > 0" class="flex items-center" title="子任務進度">
-                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                                     {{ completedSubtasksCount(element) }}/{{ element.subtasks.length }}
                                 </span>
                                 <span v-if="element.dueDate" class="flex items-center" title="日期">
@@ -106,11 +110,12 @@
         </div>
 
         <!-- 編輯卡片 Modal -->
-        <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div class="bg-white w-[600px] max-h-[90vh] rounded-xl shadow-2xl p-6 flex flex-col">
+        <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-2">
+            <!-- 寬度改為 w-[95%] sm:w-[600px] -->
+            <div class="bg-white w-[95%] sm:w-[600px] max-h-[95vh] rounded-xl shadow-2xl p-4 sm:p-6 flex flex-col">
                 <div class="flex justify-between items-start mb-4 border-b pb-3">
                     <h2 class="text-xl font-bold">編輯卡片</h2>
-                    <button @click="closeEditModal" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+                    <button @click="closeEditModal" class="text-gray-400 hover:text-gray-800 text-2xl leading-none">&times;</button>
                 </div>
 
                 <div class="overflow-y-auto pr-2 flex-1 space-y-4 pb-2">
@@ -119,7 +124,8 @@
                         <input v-model="editingCard.title" type="text" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 outline-none">
                     </div>
                     
-                    <div class="flex space-x-4">
+                    <!-- 手機上改為直排，桌機橫排 -->
+                    <div class="flex flex-col sm:flex-row gap-4">
                         <div class="flex-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">預計完成日</label>
                             <input v-model="editingCard.dueDate" type="date" class="w-full border rounded-lg p-2 outline-none text-sm">
@@ -131,7 +137,7 @@
                     </div>
 
                     <!-- 團隊協作設定區塊 -->
-                    <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mt-4">
+                    <div class="bg-indigo-50 p-3 sm:p-4 rounded-lg border border-indigo-100 mt-4">
                         <label class="flex items-center cursor-pointer mb-3">
                             <input type="checkbox" v-model="editingCard.isCollaborative" class="mr-2 accent-indigo-600 w-4 h-4">
                             <span class="text-sm font-bold text-indigo-800">🤝 團隊協作專案</span>
@@ -142,7 +148,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">專案代碼 (作為合併鍵值，例: PROJ-01)</label>
                                 <input v-model="editingCard.projectCode" type="text" placeholder="輸入唯一的全域代碼" class="w-full border rounded-lg p-2 outline-none text-sm uppercase">
                             </div>
-                            <div class="flex space-x-4">
+                            <div class="flex flex-col sm:flex-row gap-4">
                                 <div class="flex-1">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">主責人員</label>
                                     <select v-model="editingCard.primaryOwner" class="w-full border rounded-lg p-2 outline-none text-sm bg-white">
@@ -169,15 +175,15 @@
                         </label>
                         <div class="space-y-2 mt-2">
                             <div v-for="(subtask, sIdx) in editingCard.subtasks" :key="subtask.id" class="flex items-center space-x-2">
-                                <input type="checkbox" v-model="subtask.done" @change="toggleSubtask(subtask)" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <input type="checkbox" v-model="subtask.done" @change="toggleSubtask(subtask)" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0">
                                 <input v-model="subtask.title" type="text" class="flex-1 border-b border-gray-200 px-1 py-0.5 outline-none text-sm focus:border-blue-500" placeholder="子任務內容">
-                                <button @click="editingCard.subtasks.splice(sIdx, 1)" class="text-red-400 hover:text-red-600 text-sm">✖</button>
+                                <button @click="editingCard.subtasks.splice(sIdx, 1)" class="text-red-400 hover:text-red-600 text-sm flex-shrink-0 px-1">✖</button>
                             </div>
                         </div>
                     </div>
                     
                     <!-- 🔁 循環設定 -->
-                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mt-4">
+                    <div class="bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-100 mt-4">
                         <label class="block text-sm font-bold text-blue-800 mb-2 flex items-center">🔁 循環設定</label>
                         <select v-model="editingCard.recurrence" class="w-full border rounded-lg p-2 outline-none mb-3 text-sm bg-white">
                             <option value="none">不循環</option>
@@ -188,7 +194,7 @@
 
                         <div v-if="editingCard.recurrence !== 'none'" class="space-y-3">
                             <label class="block text-sm font-medium text-gray-700 mb-1">結束條件</label>
-                            <div class="flex items-center space-x-4 text-sm">
+                            <div class="flex flex-wrap items-center gap-4 text-sm">
                                 <label class="flex items-center"><input type="radio" v-model="editingCard.recurEndType" value="never" class="mr-1"> 永不結束</label>
                                 <label class="flex items-center"><input type="radio" v-model="editingCard.recurEndType" value="date" class="mr-1"> 依日期</label>
                                 <label class="flex items-center"><input type="radio" v-model="editingCard.recurEndType" value="count" class="mr-1"> 依次數</label>
@@ -206,12 +212,12 @@
                     <div class="flex items-center mt-4">
                         <label class="flex items-center cursor-pointer">
                             <input type="checkbox" v-model="editingCard.isWatched" class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400 flex-shrink-0"></div>
                             <span class="ml-3 text-sm font-medium text-gray-700">追蹤此卡片 (Watch)</span>
                         </label>
                     </div>
 
-                    <!-- 🕒 異動歷程 (預設折疊) -->
+                    <!-- 🕒 異動歷程 -->
                     <details class="mt-4 border border-gray-200 rounded-lg bg-gray-50 group">
                         <summary class="text-sm font-bold text-gray-600 cursor-pointer p-3 outline-none select-none flex justify-between items-center">
                             <span>🕒 異動歷程 ({{ editingCard.logs ? editingCard.logs.length : 0 }} 筆)</span>
@@ -233,17 +239,16 @@
                     </details>
                 </div>
 
-                <div class="mt-4 pt-4 border-t flex justify-between bg-white items-center">
-                    <div class="space-x-2">
-                        <button @click="archiveCurrentCard" class="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm transition font-medium border border-red-200">
+                <div class="mt-4 pt-4 border-t flex justify-between bg-white items-center gap-2">
+                    <div class="flex gap-2">
+                        <button @click="archiveCurrentCard" class="text-red-600 hover:bg-red-50 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm transition font-medium border border-red-200 whitespace-nowrap">
                             📥 封存
                         </button>
-                        <!-- 這是匯出更新狀態包的按鈕 -->
-                        <button @click="exportSingleCard" class="text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg text-sm transition font-medium border border-indigo-200">
-                            📤 匯出此卡片
+                        <button @click="exportSingleCard" class="text-indigo-600 hover:bg-indigo-50 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm transition font-medium border border-indigo-200 whitespace-nowrap">
+                            📤 單卡
                         </button>
                     </div>
-                    <button @click="closeEditModal" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 shadow font-medium">
+                    <button @click="closeEditModal" class="bg-blue-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 shadow font-medium text-sm sm:text-base whitespace-nowrap">
                         完成
                     </button>
                 </div>
@@ -251,23 +256,23 @@
         </div>
 
         <!-- 封存庫 Modal -->
-        <div v-if="showArchiveModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div class="bg-white w-[600px] max-h-[80vh] rounded-xl shadow-2xl p-6 flex flex-col">
+        <div v-if="showArchiveModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-2">
+            <div class="bg-white w-[95%] sm:w-[600px] max-h-[80vh] rounded-xl shadow-2xl p-4 sm:p-6 flex flex-col">
                 <div class="flex justify-between items-center mb-4 border-b pb-3">
                     <h2 class="text-xl font-bold">🗄️ 封存庫</h2>
-                    <button @click="showArchiveModal = false" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+                    <button @click="showArchiveModal = false" class="text-gray-400 hover:text-gray-800 text-2xl leading-none">&times;</button>
                 </div>
                 <div class="overflow-y-auto flex-1">
                     <div v-if="archivedTasks.length === 0" class="text-center text-gray-400 py-10">目前沒有已封存的卡片</div>
                     <ul class="space-y-3">
-                        <li v-for="(task, index) in archivedTasks" :key="task.id" class="bg-gray-50 border rounded-lg p-3 flex justify-between items-center">
+                        <li v-for="(task, index) in archivedTasks" :key="task.id" class="bg-gray-50 border rounded-lg p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
                                 <p class="font-semibold text-gray-800">{{ task.title }}</p>
                                 <p class="text-xs text-gray-500">預計日期: {{ task.dueDate || '無' }}</p>
                             </div>
-                            <div class="space-x-2">
-                                <button @click="restoreTask(index)" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">🔄 還原</button>
-                                <button @click="deleteArchivedTask(index)" class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">🗑️ 刪除</button>
+                            <div class="flex gap-2">
+                                <button @click="restoreTask(index)" class="text-xs sm:text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">🔄 還原</button>
+                                <button @click="deleteArchivedTask(index)" class="text-xs sm:text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">🗑️ 刪除</button>
                             </div>
                         </li>
                     </ul>
@@ -276,11 +281,11 @@
         </div>
 
         <!-- 系統設定 Modal -->
-        <div v-if="showSettingsModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div class="bg-white w-[400px] rounded-xl shadow-2xl p-6 flex flex-col">
+        <div v-if="showSettingsModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-2">
+            <div class="bg-white w-[95%] sm:w-[400px] rounded-xl shadow-2xl p-4 sm:p-6 flex flex-col">
                 <div class="flex justify-between items-center mb-4 border-b pb-3">
                     <h2 class="text-xl font-bold">⚙️ 系統設定</h2>
-                    <button @click="showSettingsModal = false" class="text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+                    <button @click="showSettingsModal = false" class="text-gray-400 hover:text-gray-800 text-2xl leading-none">&times;</button>
                 </div>
                 
                 <div class="space-y-6 py-2 overflow-y-auto max-h-[60vh]">
@@ -312,6 +317,7 @@
         </div>
     </div>
 
+    <!-- 所有的 JavaScript 業務邏輯保持原樣，一字未改 -->
     <script>
         const { createApp, ref, watch, onMounted } = Vue;
         const draggable = window.vuedraggable;
@@ -320,7 +326,7 @@
             components: { draggable },
             setup() {
                 const STORAGE_KEY = 'kanban-team-v5-data';
-                const systemVersion = ref('v1.8.0'); 
+                const systemVersion = ref('v1.8.1 (Mobile Ready)'); 
                 
                 const teamMembers = ref(['王小明', '陳小芳', '李大仁', '張大明', '林小華', '黃小翠']);
                 const teamMembersStr = ref(teamMembers.value.join(', '));
@@ -380,7 +386,6 @@
                     teamMembers.value = teamMembersStr.value.split(',').map(m => m.trim()).filter(m => m);
                 };
 
-                // --- 核心 Log 寫入機制 ---
                 const addLog = (card, action) => {
                     if (!card.logs) card.logs = [];
                     const now = new Date();
@@ -476,7 +481,6 @@
                 let originalSnapshot = null;
 
                 const openEditModal = (card, column, index) => {
-                    // 為了精準追蹤子任務，若舊資料沒有 id 則幫忙補上
                     if (card.subtasks) {
                         card.subtasks.forEach(st => {
                             if (!st.id) st.id = 'st-' + Date.now() + Math.random().toString(36).substr(2, 5);
@@ -488,31 +492,26 @@
                     currentCardIndex.value = index;
                     tempTagsString.value = card.tags ? card.tags.join(', ') : '';
                     
-                    // 拍下快照
                     originalSnapshot = JSON.parse(JSON.stringify(card));
                     showEditModal.value = true;
                 };
 
                 const closeEditModal = () => {
-                    // 詳細快照比對引擎
                     if (editingCard.value && originalSnapshot) {
                         let changes = [];
                         const current = editingCard.value;
                         const orig = originalSnapshot;
 
-                        // 基本資訊比對
                         if (current.title !== orig.title) changes.push(`任務名稱變更為: ${current.title}`);
                         if (current.dueDate !== orig.dueDate) changes.push(`預計完成日變更為: ${current.dueDate || '(空)'}`);
                         if (JSON.stringify(current.tags || []) !== JSON.stringify(orig.tags || [])) changes.push(`標籤變更為: ${current.tags.join(', ') || '(空)'}`);
                         
-                        // 協作資訊比對
                         if (current.isCollaborative !== orig.isCollaborative) changes.push(current.isCollaborative ? '啟用了團隊協作' : '關閉了團隊協作');
                         if (current.projectCode !== orig.projectCode) changes.push(`專案代碼變更為: ${current.projectCode || '(空)'}`);
                         if (current.primaryOwner !== orig.primaryOwner) changes.push(`主責人員變更為: ${current.primaryOwner || '(空)'}`);
                         if (current.backupOwner !== orig.backupOwner) changes.push(`備援人員變更為: ${current.backupOwner || '(空)'}`);
                         if (current.recurrence !== orig.recurrence) changes.push(`循環設定變更為: ${current.recurrence}`);
 
-                        // 子任務精細比對 (透過隱藏 ID)
                         const origSubMap = new Map((orig.subtasks || []).map(st => [st.id, st]));
                         const currSubMap = new Map((current.subtasks || []).map(st => [st.id, st]));
                         
@@ -530,7 +529,6 @@
                             }
                         }
 
-                        // 將所有變更組合成條列式 Log
                         if (changes.length > 0) {
                             addLog(current, '編輯了卡片內容:\n• ' + changes.join('\n• '));
                         }
@@ -547,7 +545,6 @@
 
                 const addSubtask = () => {
                     if (!editingCard.value.subtasks) editingCard.value.subtasks = [];
-                    // 賦予隱藏 ID 供快照精準追蹤
                     editingCard.value.subtasks.push({ 
                         id: 'st-' + Date.now() + Math.random().toString(36).substr(2, 5),
                         title: '', 
@@ -609,7 +606,6 @@
                     URL.revokeObjectURL(url);
                 };
 
-                // --- 匯出單張狀態包 (Patch) ---
                 const exportSingleCard = () => {
                     const cardData = JSON.stringify(editingCard.value, null, 2);
                     const blob = new Blob([cardData], { type: 'application/json' });
@@ -626,7 +622,6 @@
 
                 const triggerFileInput = () => document.getElementById('file-upload').click();
 
-                // --- 智慧匯入與 Log 排序合併 ---
                 const importJSON = (event) => {
                     const file = event.target.files[0];
                     if (!file) return;
