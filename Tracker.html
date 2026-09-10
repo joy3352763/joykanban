@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>列管追蹤系統 - 團隊彙整版</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* 完整保留原本 tracker.html 的 CSS 設定 */
+:root {
+  --bg:        #f0efe9;
+  --surface:   #ffffff;
+  --sidebar:   #1a2235;
+  --sidebar-hover: #242f47;
+  --sidebar-active: #2d3d5c;
+  --accent:    #2563eb;
+  --accent-light: #dbeafe;
+  --cyan:      #0891b2;
+  --danger:    #dc2626;
+  --danger-bg: #fef2f2;
+  --warn:      #d97706;
+  --warn-bg:   #fffbeb;
+  --ok:        #059669;
+  --ok-bg:     #ecfdf5;
+  --muted:     #94a3b8;
+  --border:    #e2e1d9;
+  --text:      #0f172a;
+  --text-2:    #475569;
+  --text-3:    #94a3b8;
+  --radius:    10px;
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14px; }
+
+/* ── Sidebar ── */
+.sidebar { width: 220px; min-height: 100vh; background: var(--sidebar); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
+.sidebar-logo { padding: 20px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.sidebar-logo .logo-mark { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .12em; color: var(--cyan); text-transform: uppercase; margin-bottom: 4px; }
+.sidebar-logo .logo-title { font-size: 15px; font-weight: 600; color: #e2e8f0; line-height: 1.3; }
+.sidebar-nav { padding: 12px 0; flex: 1; }
+.nav-label { font-size: 10px; letter-spacing: .1em; color: rgba(255,255,255,.25); padding: 12px 20px 4px; text-transform: uppercase; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 20px; color: rgba(255,255,255,.55); cursor: pointer; transition: all .15s; font-size: 13.5px; border-left: 3px solid transparent; }
+.nav-item:hover { background: var(--sidebar-hover); color: #e2e8f0; }
+.nav-item.active { background: var(--sidebar-active); color: #ffffff; border-left-color: var(--cyan); }
+.nav-item .icon { width: 18px; text-align: center; font-size: 15px; }
+.sidebar-footer { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,.07); }
+.user-chip { display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--cyan), var(--accent)); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 500; color: #e2e8f0; }
+.user-role { font-size: 11px; color: rgba(255,255,255,.4); }
+
+/* ── Main layout ── */
+.main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; height: 56px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 90; }
+.topbar-title { font-size: 16px; font-weight: 600; color: var(--text); flex: 1; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; transition: all .15s; border: none; white-space: nowrap; }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* Stats bar */
+.stats-bar { display: flex; gap: 14px; padding: 16px 28px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; flex: 1; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); }
+.stat-icon { width: 38px; height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.stat-icon.blue { background: #eff6ff; }
+.stat-icon.red { background: var(--danger-bg); }
+.stat-icon.orange { background: var(--warn-bg); }
+.stat-icon.green { background: var(--ok-bg); }
+.stat-value { font-size: 22px; font-weight: 700; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+.stat-label { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
+/* Filter toolbar */
+.filter-bar { display: flex; gap: 10px; align-items: center; padding: 0 28px 16px; flex-wrap: wrap; }
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 14px; }
+.search-wrap input { width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; background: var(--surface); color: var(--text); transition: border .15s; }
+.search-wrap input:focus { outline: none; border-color: var(--accent); }
+select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; background: var(--surface); color: var(--text); cursor: pointer; appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+select:focus { outline: none; border-color: var(--accent); }
+
+/* Table */
+.table-wrap { padding: 0 28px 28px; flex: 1; }
+.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+thead { background: #f8f8f6; }
+th { padding: 11px 14px; text-align: left; font-size: 11.5px; font-weight: 600; color: var(--text-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text); }
+td { padding: 12px 14px; border-bottom: 1px solid #f0f0ec; vertical-align: middle; }
+tbody tr:hover { background: #fafaf8; }
+tbody tr.overdue td:first-child { border-left: 3px solid var(--danger); }
+tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
+.seq-no { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-3); font-weight: 500; }
+.type-badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+.type-badge.project { background: #eff6ff; color: #1d4ed8; }
+.type-badge.routine { background: #f0fdf4; color: #15803d; }
+.item-title { font-weight: 500; color: var(--text); line-height: 1.4; }
+.item-subtitle { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+
+/* Progress & Status */
+.progress-wrap { min-width: 120px; }
+.progress-top { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.progress-pct { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; }
+.progress-bar { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 99px; transition: width .3s ease; }
+.progress-fill.low { background: var(--danger); }
+.progress-fill.mid { background: var(--warn); }
+.progress-fill.high { background: var(--ok); }
+.status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 500; }
+.status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+.status-badge.continue { background: #eff6ff; color: #2563eb; } .status-badge.continue::before { background: #2563eb; }
+.status-badge.resolved { background: #f1f5f9; color: #64748b; } .status-badge.resolved::before { background: #94a3b8; }
+.status-badge.overdue { background: var(--danger-bg); color: var(--danger); } .status-badge.overdue::before { background: var(--danger); }
+.wf-badge { display: inline-flex; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 500; }
+.wf-badge.draft { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+.wf-badge.review { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; }
+.wf-badge.approved { background: var(--ok-bg); color: var(--ok); border: 1px solid #a7f3d0; }
+.wf-badge.returned { background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
+
+.track-date { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-2); }
+.track-date.overdue { color: var(--danger); font-weight: 600; }
+.track-date.soon { color: var(--warn); font-weight: 600; }
+.actions { display: flex; gap: 6px; }
+
+/* Expanded & Empty */
+.expanded-row td { background: #fafaf8; padding: 0; }
+.expanded-content { padding: 16px 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.detail-label { font-size: 11px; color: var(--text-3); margin-bottom: 6px; }
+.detail-text { font-size: 13px; line-height: 1.7; color: var(--text-2); white-space: pre-wrap; }
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
+.empty-state p { color: var(--text-3); font-size: 14px; }
+.section-divider { padding: 8px 14px; background: #f8f7f4; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--text-3); cursor: pointer; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar (維持原樣) -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">TRACK·SYS</div>
+    <div class="logo-title">列管追蹤<br>管理平台</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">主選單</div>
+    <div class="nav-item active"><span class="icon">📋</span> 列管彙整視角</div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar">管</div>
+      <div class="user-info">
+        <div class="user-name">主管儀表板</div>
+        <div class="user-role">唯讀彙整模式</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-title">團隊專案聚合清單</div>
+    <div class="topbar-actions">
+      <!-- 隱藏的檔案輸入框支援多選 -->
+      <input type="file" id="multi-upload" multiple accept=".json" onchange="handleTeamUpload(event)" style="display: none;">
+      <button class="btn btn-primary" onclick="document.getElementById('multi-upload').click()">📂 匯入團隊 JSON</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card">
+      <div class="stat-icon blue">📋</div>
+      <div><div class="stat-value" id="statTotal">0</div><div class="stat-label">列管中</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red">⚠️</div>
+      <div><div class="stat-value" id="statOverdue">0</div><div class="stat-label">逾期</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon orange">⏰</div>
+      <div><div class="stat-value" id="statSoon">0</div><div class="stat-label">即將到期（7天內）</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">✅</div>
+      <div><div class="stat-value" id="statResolved">0</div><div class="stat-label">已解除列管 (Done)</div></div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <span class="icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜尋事項說明、主責人員…" oninput="debouncedFilter()">
+    </div>
+    <select id="filterType" onchange="applyFilter()">
+      <option value="">全部類型</option>
+      <option value="專案">團隊協作專案</option>
+      <option value="日常作業">個人日常作業</option>
+    </select>
+    <select id="filterWf" onchange="applyFilter()">
+      <option value="">全部流程狀態</option>
+      <option value="草稿">草稿 (Backlog)</option>
+      <option value="修改中">修改中 (In Progress)</option>
+      <option value="已覆核">已覆核 (Done)</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ 清除</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <div class="table-card">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th>識別碼</th>
+            <th>類型</th>
+            <th>事項說明</th>
+            <th class="sortable" onclick="sortBy('progress')">進度 <span class="sort-icon">↕</span></th>
+            <th>辦理流程</th>
+            <th>追蹤狀態</th>
+            <th class="sortable" onclick="sortBy('next_track_date')">下次追蹤日 <span class="sort-icon">↕</span></th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- 預設顯示空狀態 -->
+            <tr><td colspan="8">
+                <div class="empty-state">
+                  <div class="icon">📂</div><p>請點擊右上方「匯入團隊 JSON」按鈕載入資料</p>
+                </div>
+            </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── 核心變數 ────────────────────────────────────────────────────────
+const TODAY = new Date();
+let CURRENT_ITEMS = []; // 取代原本的 MOCK_ITEMS
+let filteredItems = [];
+let sortField = 'next_track_date';
+let sortAsc = true;
+let expandedIds = new Set();
+let resolvedCollapsed = false;
+
+// ── JSON 多檔解析與合併邏輯 ──────────────────────────────────────────
+async function handleTeamUpload(event) {
+  const files = event.target.files;
+  if (!files.length) return;
+
+  let allRawTasks = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const fileOwner = data.boardOwner || '未命名成員'; // 取得該檔案的設定擁有者
+
+      data.columns.forEach(col => {
+        col.tasks.forEach(task => {
+          allRawTasks.push({
+            ...task,
+            fileOwner: fileOwner,
+            columnStatus: col.name // Backlog, In Progress, Done
+          });
+        });
+      });
+    } catch (err) {
+      console.error("檔案解析失敗:", file.name, err);
+    }
+  }
+
+  processAndMergeTasks(allRawTasks);
+  event.target.value = ''; // 讓下次選同檔案也能觸發
+}
+
+function processAndMergeTasks(rawTasks) {
+  let mergedDict = {};
+
+  rawTasks.forEach(task => {
+    // 1. 動態計算進度百分比
+    let totalSub = task.subtasks ? task.subtasks.length : 0;
+    let doneSub = task.subtasks ? task.subtasks.filter(s => s.done).length : 0;
+    let progressPct = totalSub === 0 ? (task.columnStatus === 'Done' ? 100 : 0) : Math.round((doneSub / totalSub) * 100);
+
+    const mergedTask = { ...task, progressPct };
+
+    // 2. 衝突合併防呆邏輯
+    if (task.isCollaborative && task.projectCode) {
+      const code = task.projectCode.toUpperCase();
+      if (!mergedDict[code]) {
+        mergedDict[code] = mergedTask;
+      } else {
+        // 【關鍵】如果這個檔案的擁有者 = 這張卡片設定的主責人員，才有資格覆蓋進度！
+        if (task.primaryOwner === task.fileOwner) {
+          mergedDict[code] = mergedTask;
+        }
+      }
+    } else {
+      // 非協作專案，把人名加上 ID 當作唯一鍵值避免 ID 撞期
+      mergedDict[task.id + '_' + task.fileOwner] = mergedTask;
+    }
+  });
+
+  // 3. 轉譯為 Tracker 視覺需要的格式
+  CURRENT_ITEMS = Object.values(mergedDict).map(t => {
+    return {
+      id: t.id + '_' + t.fileOwner, // 前端 UI 操作用的 ID
+      seq_no: t.projectCode ? t.projectCode.toUpperCase() : t.id.slice(-5),
+      type: t.isCollaborative ? '專案' : '日常作業',
+      workflow_status: t.columnStatus === 'Backlog' ? '草稿' : (t.columnStatus === 'In Progress' ? '修改中' : '已覆核'),
+      title: t.title,
+      // 將人員與標籤資訊塞入 detail_text 供展開檢視
+      detail_text: `【檔案提供者】 ${t.fileOwner}\n【主責人員】 ${t.primaryOwner || t.fileOwner} \n【備援人員】 ${t.backupOwner || '無'}\n【標籤】 ${t.tags && t.tags.length ? t.tags.join(', ') : '無'}`,
+      progress: t.progressPct,
+      track_status: t.columnStatus === 'Done' ? '解除列管' : '繼續追蹤',
+      next_track_date: t.dueDate || null,
+      updated_by: t.fileOwner
+    };
+  });
+
+  applyFilter();
+  alert(`成功解析並合併了 ${CURRENT_ITEMS.length} 筆不重複的專案任務！`);
+}
+
+
+// ── 輔助函式 ──────────────────────────────────────────────────────────────
+function dateDiff(dateStr) {
+  if (!dateStr) return null;
+  const target = new Date(dateStr);
+  return Math.round((target - TODAY) / 86400000);
+}
+function formatDate(dateStr) {
+  if (!dateStr) return null;
+  const [y,m,d] = dateStr.split('-');
+  return `${y}/${m}/${d}`;
+}
+
+// ── 統計與篩選 ─────────────────────────────────────────────────────────────
+function updateStats() {
+  const active = CURRENT_ITEMS.filter(i => i.track_status !== '解除列管');
+  const overdue = active.filter(i => dateDiff(i.next_track_date) < 0);
+  const soon = active.filter(i => { const d = dateDiff(i.next_track_date); return d !== null && d >= 0 && d <= 7; });
+  const resolved = CURRENT_ITEMS.filter(i => i.track_status === '解除列管');
+  
+  document.getElementById('statTotal').textContent = active.length;
+  document.getElementById('statOverdue').textContent = overdue.length;
+  document.getElementById('statSoon').textContent = soon.length;
+  document.getElementById('statResolved').textContent = resolved.length;
+}
+
+let debTimer;
+function debouncedFilter() { clearTimeout(debTimer); debTimer = setTimeout(applyFilter, 280); }
+
+function applyFilter() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const type = document.getElementById('filterType').value;
+  const wf = document.getElementById('filterWf').value;
+  
+  filteredItems = CURRENT_ITEMS.filter(item => {
+    if (q && !item.title.toLowerCase().includes(q) && !item.detail_text.toLowerCase().includes(q)) return false;
+    if (type && item.type !== type) return false;
+    if (wf && item.workflow_status !== wf) return false;
+    return true;
+  });
+  
+  updateStats();
+  renderTable();
+}
+
+function clearFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterType').value = '';
+  document.getElementById('filterWf').value = '';
+  applyFilter();
+}
+
+function sortBy(field) {
+  if (sortField === field) sortAsc = !sortAsc;
+  else { sortField = field; sortAsc = true; }
+  renderTable();
+}
+
+// ── 渲染 Table ─────────────────────────────────────────────────────────────
+function renderTable() {
+  const active = filteredItems.filter(i => i.track_status !== '解除列管');
+  const resolved = filteredItems.filter(i => i.track_status === '解除列管');
+
+  const sortFn = (a, b) => {
+    let av = a[sortField], bv = b[sortField];
+    if (av == null) av = sortAsc ? '9999-99-99' : '';
+    if (bv == null) bv = sortAsc ? '9999-99-99' : '';
+    return sortAsc ? av > bv ? 1 : -1 : av < bv ? 1 : -1;
+  };
+  active.sort(sortFn);
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+
+  if (active.length === 0 && resolved.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+      <div class="icon">📭</div><p>找不到符合條件的項目，或尚未匯入資料</p>
+    </div></td></tr>`;
+    return;
+  }
+
+  active.forEach(item => renderRow(item, tbody));
+
+  if (resolved.length > 0) {
+    const div = document.createElement('tr');
+    div.innerHTML = `<td colspan="8">
+      <div class="section-divider ${resolvedCollapsed ? 'collapsed' : ''}" onclick="toggleResolved(this)">
+        <span class="chevron">▼</span> 已解除列管 / Done (${resolved.length} 筆)
+      </div>
+    </td>`;
+    tbody.appendChild(div);
+
+    if (!resolvedCollapsed) {
+      resolved.forEach(item => renderRow(item, tbody));
+    }
+  }
+}
+
+function renderRow(item, tbody) {
+  const diff = dateDiff(item.next_track_date);
+  const isOverdue = diff !== null && diff < 0;
+  const isSoon = diff !== null && diff >= 0 && diff <= 7;
+  const rowClass = item.track_status === '解除列管' ? '' : (isOverdue ? 'overdue' : (isSoon ? 'soon' : ''));
+
+  const pct = item.progress;
+  const fillClass = pct < 30 ? 'low' : pct < 70 ? 'mid' : 'high';
+
+  let tsBadge = item.track_status === '解除列管' ? `<span class="status-badge resolved">解除列管</span>` : 
+                (isOverdue ? `<span class="status-badge overdue">繼續追蹤</span>` : `<span class="status-badge continue">繼續追蹤</span>`);
+
+  const wfMap = { '草稿': 'draft', '修改中': 'review', '已覆核': 'approved' };
+  const wfBadge = `<span class="wf-badge ${wfMap[item.workflow_status] || 'draft'}">${item.workflow_status}</span>`;
+
+  let trackDateHtml = '<span class="track-date none">—</span>';
+  if (item.next_track_date) {
+    const cls = isOverdue ? 'overdue' : (isSoon ? 'soon' : '');
+    const label = isOverdue ? `⚠ ${formatDate(item.next_track_date)}` : formatDate(item.next_track_date);
+    trackDateHtml = `<span class="track-date ${cls}">${label}</span>`;
+  }
+
+  const typeBadge = item.type === '專案' ? `<span class="type-badge project">📌 協作專案</span>` : `<span class="type-badge routine">🔁 個人作業</span>`;
+
+  let actions = `<button class="btn btn-ghost btn-sm" onclick="toggleExpand('${item.id}')" data-tip="展開詳情">🔍 詳情</button>`;
+
+  const tr = document.createElement('tr');
+  tr.className = rowClass;
+  tr.innerHTML = `
+    <td><span class="seq-no">${item.seq_no}</span></td>
+    <td>${typeBadge}</td>
+    <td>
+      <div class="item-title">${item.title}</div>
+      <div class="item-subtitle">${item.detail_text.split('\n')[1]}</div>
+    </td>
+    <td>
+      <div class="progress-wrap">
+        <div class="progress-top"><span class="progress-pct">${pct}%</span></div>
+        <div class="progress-bar"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div>
+      </div>
+    </td>
+    <td>${wfBadge}</td>
+    <td>${tsBadge}</td>
+    <td>${trackDateHtml}</td>
+    <td><div class="actions">${actions}</div></td>
+  `;
+  tbody.appendChild(tr);
+
+  if (expandedIds.has(item.id)) {
+    const exp = document.createElement('tr');
+    exp.className = 'expanded-row';
+    exp.innerHTML = `<td colspan="8">
+      <div class="expanded-content">
+        <div class="detail-block">
+          <div class="detail-label">協作與標籤資訊</div>
+          <div class="detail-text">${item.detail_text}</div>
+        </div>
+      </div>
+    </td>`;
+    tbody.appendChild(exp);
+  }
+}
+
+function toggleExpand(id) {
+  if (expandedIds.has(id)) expandedIds.delete(id);
+  else expandedIds.add(id);
+  renderTable();
+}
+
+function toggleResolved(el) {
+  resolvedCollapsed = !resolvedCollapsed;
+  el.classList.toggle('collapsed', resolvedCollapsed);
+  renderTable();
+}
+</script>
+</body>
+</html>
+
+Read Frog
