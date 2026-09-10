@@ -29,6 +29,7 @@
  * 直覺拖曳：支援 Backlog、In Progress、Done 欄位間的平滑拖曳操作。
  * 多維度屬性：支援自訂標籤 (Tags)、預計完成日 (Due Date)、子任務進度條 (Subtasks)，以及視覺化的追蹤標記 (Watch)。
  * 自動循環重生 (Recurring Tasks)：支援每日、每週、每月循環任務，並可自訂結束條件（特定日期或執行次數），卡片進入 Done 後自動於 Backlog 產生新週期任務。
+ * 完整的異動log。
 2. 完美的 Obsidian 工作流連動
  * 一鍵轉譯 Markdown：點擊「複製為 Obsidian」，看板資料將自動轉化為相容於 Dataview 與 Tasks 外掛的語法。
  * 雙括號連結：任務標題會自動轉換為 [[內部連結]]，貼入 Obsidian 後可無縫對接你的每日工作日誌 (Daily Note)。
