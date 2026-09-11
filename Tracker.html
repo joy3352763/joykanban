@@ -3,19 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>列管追蹤系統 - 團隊彙整版</title>
+<title>列管追蹤系統 - 單一框架版</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* 完整保留原本 tracker.html 的 CSS 設定 */
+/* 基礎變數設定保留 */
 :root {
   --bg:        #f0efe9;
   --surface:   #ffffff;
-  --sidebar:   #1a2235;
-  --sidebar-hover: #242f47;
-  --sidebar-active: #2d3d5c;
   --accent:    #2563eb;
-  --accent-light: #dbeafe;
   --cyan:      #0891b2;
   --danger:    #dc2626;
   --danger-bg: #fef2f2;
@@ -30,42 +26,23 @@
   --text-3:    #94a3b8;
   --radius:    10px;
   --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14px; }
 
-/* ── Sidebar ── */
-.sidebar { width: 220px; min-height: 100vh; background: var(--sidebar); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
-.sidebar-logo { padding: 20px 20px 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
-.sidebar-logo .logo-mark { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .12em; color: var(--cyan); text-transform: uppercase; margin-bottom: 4px; }
-.sidebar-logo .logo-title { font-size: 15px; font-weight: 600; color: #e2e8f0; line-height: 1.3; }
-.sidebar-nav { padding: 12px 0; flex: 1; }
-.nav-label { font-size: 10px; letter-spacing: .1em; color: rgba(255,255,255,.25); padding: 12px 20px 4px; text-transform: uppercase; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 20px; color: rgba(255,255,255,.55); cursor: pointer; transition: all .15s; font-size: 13.5px; border-left: 3px solid transparent; }
-.nav-item:hover { background: var(--sidebar-hover); color: #e2e8f0; }
-.nav-item.active { background: var(--sidebar-active); color: #ffffff; border-left-color: var(--cyan); }
-.nav-item .icon { width: 18px; text-align: center; font-size: 15px; }
-.sidebar-footer { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,.07); }
-.user-chip { display: flex; align-items: center; gap: 10px; }
-.user-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--cyan), var(--accent)); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600; flex-shrink: 0; }
-.user-info { flex: 1; min-width: 0; }
-.user-name { font-size: 13px; font-weight: 500; color: #e2e8f0; }
-.user-role { font-size: 11px; color: rgba(255,255,255,.4); }
-
 /* ── Main layout ── */
-.main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.main { flex: 1; display: flex; flex-direction: column; min-height: 100vh; width: 100%; }
 .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; height: 56px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 90; }
-.topbar-title { font-size: 16px; font-weight: 600; color: var(--text); flex: 1; }
+.topbar-title { font-size: 16px; font-weight: 600; color: var(--text); flex: 1; display: flex; align-items: center; gap: 8px; }
+.version-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
 
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; transition: all .15s; border: none; white-space: nowrap; }
 .btn-primary { background: var(--accent); color: white; }
 .btn-primary:hover { background: #1d4ed8; }
-.btn-ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
-.btn-ghost:hover { background: var(--bg); }
+.btn-ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--border); }
+.btn-ghost:hover { background: #f8f8f6; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 
 /* Stats bar */
@@ -85,8 +62,8 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: va
 .search-wrap .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 14px; }
 .search-wrap input { width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; background: var(--surface); color: var(--text); transition: border .15s; }
 .search-wrap input:focus { outline: none; border-color: var(--accent); }
-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; background: var(--surface); color: var(--text); cursor: pointer; appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
-select:focus { outline: none; border-color: var(--accent); }
+select.filter-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; background: var(--surface); color: var(--text); cursor: pointer; appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+select.filter-select:focus { outline: none; border-color: var(--accent); }
 
 /* Table */
 .table-wrap { padding: 0 28px 28px; flex: 1; }
@@ -116,12 +93,17 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 .progress-fill.low { background: var(--danger); }
 .progress-fill.mid { background: var(--warn); }
 .progress-fill.high { background: var(--ok); }
-.status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 500; }
+
+/* Badges - 恢復為純顯示，並加入點擊修改的提示與效果 */
+.status-badge, .wf-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+.status-badge:hover, .wf-badge:hover { opacity: 0.7; }
 .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+
 .status-badge.continue { background: #eff6ff; color: #2563eb; } .status-badge.continue::before { background: #2563eb; }
 .status-badge.resolved { background: #f1f5f9; color: #64748b; } .status-badge.resolved::before { background: #94a3b8; }
 .status-badge.overdue { background: var(--danger-bg); color: var(--danger); } .status-badge.overdue::before { background: var(--danger); }
-.wf-badge { display: inline-flex; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 500; }
+
+.wf-badge { border-radius: 5px; }
 .wf-badge.draft { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
 .wf-badge.review { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; }
 .wf-badge.approved { background: var(--ok-bg); color: var(--ok); border: 1px solid #a7f3d0; }
@@ -134,9 +116,16 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 
 /* Expanded & Empty */
 .expanded-row td { background: #fafaf8; padding: 0; }
-.expanded-content { padding: 16px 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.detail-label { font-size: 11px; color: var(--text-3); margin-bottom: 6px; }
-.detail-text { font-size: 13px; line-height: 1.7; color: var(--text-2); white-space: pre-wrap; }
+.expanded-content { padding: 16px 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; }
+.detail-block { background: #fff; padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
+.detail-label { font-size: 12px; font-weight: 600; color: var(--text-3); margin-bottom: 8px; border-bottom: 1px solid #f0f0ec; padding-bottom: 6px; }
+.detail-text { font-size: 13px; line-height: 1.6; color: var(--text-2); white-space: pre-wrap; }
+.log-entry { margin-bottom: 8px; font-size: 12.5px; border-left: 2px solid var(--border); padding-left: 8px; }
+.log-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); }
+.log-user { font-weight: 600; color: var(--text); }
+.subtask-item { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
+.subtask-item.done { color: var(--ok); text-decoration: line-through; opacity: 0.7; }
+
 .empty-state { text-align: center; padding: 60px 20px; }
 .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
 .empty-state p { color: var(--text-3); font-size: 14px; }
@@ -148,34 +137,17 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 </head>
 <body>
 
-<!-- Sidebar (維持原樣) -->
-<aside class="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-mark">TRACK·SYS</div>
-    <div class="logo-title">列管追蹤<br>管理平台</div>
-  </div>
-  <nav class="sidebar-nav">
-    <div class="nav-label">主選單</div>
-    <div class="nav-item active"><span class="icon">📋</span> 列管彙整視角</div>
-  </nav>
-  <div class="sidebar-footer">
-    <div class="user-chip">
-      <div class="user-avatar">管</div>
-      <div class="user-info">
-        <div class="user-name">主管儀表板</div>
-        <div class="user-role">唯讀彙整模式</div>
-      </div>
-    </div>
-  </div>
-</aside>
-
-<!-- Main -->
 <main class="main">
   <!-- Top bar -->
   <div class="topbar">
-    <div class="topbar-title">團隊專案聚合清單</div>
+    <div class="topbar-title">團隊專案聚合清單 <span class="version-tag">v1.2.0</span></div>
     <div class="topbar-actions">
-      <!-- 隱藏的檔案輸入框支援多選 -->
+      <!-- 配置與匯入匯出按鈕 -->
+      <button class="btn btn-ghost" onclick="exportConfig()" title="匯出您的資料與自訂標籤慣用語">📥 產出配置 JSON</button>
+      
+      <input type="file" id="config-upload" accept=".json" onchange="importConfig(event)" style="display: none;">
+      <button class="btn btn-ghost" onclick="document.getElementById('config-upload').click()">📤 匯入配置 JSON</button>
+      
       <input type="file" id="multi-upload" multiple accept=".json" onchange="handleTeamUpload(event)" style="display: none;">
       <button class="btn btn-primary" onclick="document.getElementById('multi-upload').click()">📂 匯入團隊 JSON</button>
     </div>
@@ -197,7 +169,7 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
     </div>
     <div class="stat-card">
       <div class="stat-icon green">✅</div>
-      <div><div class="stat-value" id="statResolved">0</div><div class="stat-label">已解除列管 (Done)</div></div>
+      <div><div class="stat-value" id="statResolved">0</div><div class="stat-label" id="statResolvedLabel">已解除列管 (Done)</div></div>
     </div>
   </div>
 
@@ -207,12 +179,12 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
       <span class="icon">🔍</span>
       <input type="text" id="searchInput" placeholder="搜尋事項說明、主責人員…" oninput="debouncedFilter()">
     </div>
-    <select id="filterType" onchange="applyFilter()">
+    <select id="filterType" class="filter-select" onchange="applyFilter()">
       <option value="">全部類型</option>
       <option value="專案">團隊協作專案</option>
       <option value="日常作業">個人日常作業</option>
     </select>
-    <select id="filterWf" onchange="applyFilter()">
+    <select id="filterWf" class="filter-select" onchange="applyFilter()">
       <option value="">全部流程狀態</option>
       <option value="草稿">草稿 (Backlog)</option>
       <option value="修改中">修改中 (In Progress)</option>
@@ -238,10 +210,9 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
           </tr>
         </thead>
         <tbody id="tableBody">
-            <!-- 預設顯示空狀態 -->
             <tr><td colspan="8">
                 <div class="empty-state">
-                  <div class="icon">📂</div><p>請點擊右上方「匯入團隊 JSON」按鈕載入資料</p>
+                  <div class="icon">📂</div><p>請點擊右上方「匯入團隊 JSON」載入原始資料，或「匯入配置 JSON」載入上次狀態</p>
                 </div>
             </td></tr>
         </tbody>
@@ -253,14 +224,98 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 <script>
 // ── 核心變數 ────────────────────────────────────────────────────────
 const TODAY = new Date();
-let CURRENT_ITEMS = []; // 取代原本的 MOCK_ITEMS
+let CURRENT_ITEMS = []; 
 let filteredItems = [];
 let sortField = 'next_track_date';
 let sortAsc = true;
 let expandedIds = new Set();
 let resolvedCollapsed = false;
 
-// ── JSON 多檔解析與合併邏輯 ──────────────────────────────────────────
+// 定義系統原始標籤與使用者的「慣用語對照表」
+let customLabels = {
+  '草稿': '草稿',
+  '修改中': '修改中',
+  '已覆核': '已覆核',
+  '繼續追蹤': '繼續追蹤',
+  '解除列管': '解除列管'
+};
+
+// ── 修改標籤慣用語小功能 ─────────────────────────────────────────────
+function renameLabel(originalKey) {
+  const currentAlias = customLabels[originalKey];
+  const newText = prompt(`您想要怎麼稱呼「${originalKey}」這個狀態？\n(原本系統名為：${originalKey})`, currentAlias);
+  
+  if (newText !== null && newText.trim() !== '') {
+    customLabels[originalKey] = newText.trim();
+    updateFilterOptionsUI(); // 更新下拉選單的文字
+    renderTable(); // 重新渲染表格套用新文字
+  }
+}
+
+function updateFilterOptionsUI() {
+  const wfSelect = document.getElementById('filterWf');
+  wfSelect.options[1].text = customLabels['草稿'] || '草稿';
+  wfSelect.options[2].text = customLabels['修改中'] || '修改中';
+  wfSelect.options[3].text = customLabels['已覆核'] || '已覆核';
+  
+  const resolvedStatLabel = document.getElementById('statResolvedLabel');
+  if(resolvedStatLabel) {
+    resolvedStatLabel.textContent = `${customLabels['解除列管'] || '解除列管'} (Done)`;
+  }
+}
+
+// ── 匯出與匯入配置 JSON ──────────────────────────────────────────────
+function exportConfig() {
+  if (CURRENT_ITEMS.length === 0) {
+    alert("目前沒有資料可以產出！");
+    return;
+  }
+  // 將資料與使用者的自訂標籤習慣一起打包
+  const configPayload = {
+    version: "1.2.0",
+    labels: customLabels,
+    items: CURRENT_ITEMS
+  };
+  
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(configPayload, null, 2));
+  const downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", "tracker_config.json");
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+}
+
+async function importConfig(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    
+    // 支援舊版純陣列，或新版包含標籤設定的物件
+    if (Array.isArray(data)) {
+      CURRENT_ITEMS = data;
+    } else if (data.items) {
+      CURRENT_ITEMS = data.items;
+      if (data.labels) {
+        customLabels = { ...customLabels, ...data.labels };
+        updateFilterOptionsUI();
+      }
+    } else {
+      alert("配置檔格式錯誤！");
+      return;
+    }
+    applyFilter();
+    alert(`成功載入配置，共 ${CURRENT_ITEMS.length} 筆追蹤項目！\n自訂標籤慣用語已同步恢復。`);
+  } catch (err) {
+    console.error("配置解析失敗:", err);
+    alert("讀取設定檔失敗。");
+  }
+  event.target.value = '';
+}
+
+// ── 團隊 JSON 多檔解析與合併邏輯 ──────────────────────────────────────────
 async function handleTeamUpload(event) {
   const files = event.target.files;
   if (!files.length) return;
@@ -272,64 +327,58 @@ async function handleTeamUpload(event) {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      const fileOwner = data.boardOwner || '未命名成員'; // 取得該檔案的設定擁有者
-
-      data.columns.forEach(col => {
-        col.tasks.forEach(task => {
-          allRawTasks.push({
-            ...task,
-            fileOwner: fileOwner,
-            columnStatus: col.name // Backlog, In Progress, Done
+      const fileOwner = data.boardOwner || '未命名成員'; 
+      
+      if (data.columns) {
+        data.columns.forEach(col => {
+          col.tasks.forEach(task => {
+            allRawTasks.push({ ...task, fileOwner: fileOwner, columnStatus: col.name });
           });
         });
-      });
+      } else if (data.id && data.title) {
+         allRawTasks.push({ ...data, fileOwner: fileOwner, columnStatus: data.columnStatus || 'In Progress' });
+      }
     } catch (err) {
       console.error("檔案解析失敗:", file.name, err);
     }
   }
 
   processAndMergeTasks(allRawTasks);
-  event.target.value = ''; // 讓下次選同檔案也能觸發
+  event.target.value = ''; 
 }
 
 function processAndMergeTasks(rawTasks) {
   let mergedDict = {};
 
   rawTasks.forEach(task => {
-    // 1. 動態計算進度百分比
     let totalSub = task.subtasks ? task.subtasks.length : 0;
     let doneSub = task.subtasks ? task.subtasks.filter(s => s.done).length : 0;
     let progressPct = totalSub === 0 ? (task.columnStatus === 'Done' ? 100 : 0) : Math.round((doneSub / totalSub) * 100);
 
     const mergedTask = { ...task, progressPct };
 
-    // 2. 衝突合併防呆邏輯
     if (task.isCollaborative && task.projectCode) {
       const code = task.projectCode.toUpperCase();
       if (!mergedDict[code]) {
         mergedDict[code] = mergedTask;
-      } else {
-        // 【關鍵】如果這個檔案的擁有者 = 這張卡片設定的主責人員，才有資格覆蓋進度！
-        if (task.primaryOwner === task.fileOwner) {
-          mergedDict[code] = mergedTask;
-        }
+      } else if (task.primaryOwner === task.fileOwner) {
+        mergedDict[code] = mergedTask;
       }
     } else {
-      // 非協作專案，把人名加上 ID 當作唯一鍵值避免 ID 撞期
       mergedDict[task.id + '_' + task.fileOwner] = mergedTask;
     }
   });
 
-  // 3. 轉譯為 Tracker 視覺需要的格式
   CURRENT_ITEMS = Object.values(mergedDict).map(t => {
     return {
-      id: t.id + '_' + t.fileOwner, // 前端 UI 操作用的 ID
-      seq_no: t.projectCode ? t.projectCode.toUpperCase() : t.id.slice(-5),
+      id: t.id + '_' + t.fileOwner, 
+      seq_no: t.projectCode ? t.projectCode.toUpperCase() : (t.id ? t.id.slice(-5) : '00000'),
       type: t.isCollaborative ? '專案' : '日常作業',
       workflow_status: t.columnStatus === 'Backlog' ? '草稿' : (t.columnStatus === 'In Progress' ? '修改中' : '已覆核'),
-      title: t.title,
-      // 將人員與標籤資訊塞入 detail_text 供展開檢視
+      title: t.title || '未命名任務',
       detail_text: `【檔案提供者】 ${t.fileOwner}\n【主責人員】 ${t.primaryOwner || t.fileOwner} \n【備援人員】 ${t.backupOwner || '無'}\n【標籤】 ${t.tags && t.tags.length ? t.tags.join(', ') : '無'}`,
+      subtasks: t.subtasks || [],
+      logs: t.logs || [],
       progress: t.progressPct,
       track_status: t.columnStatus === 'Done' ? '解除列管' : '繼續追蹤',
       next_track_date: t.dueDate || null,
@@ -340,7 +389,6 @@ function processAndMergeTasks(rawTasks) {
   applyFilter();
   alert(`成功解析並合併了 ${CURRENT_ITEMS.length} 筆不重複的專案任務！`);
 }
-
 
 // ── 輔助函式 ──────────────────────────────────────────────────────────────
 function dateDiff(dateStr) {
@@ -428,7 +476,7 @@ function renderTable() {
     const div = document.createElement('tr');
     div.innerHTML = `<td colspan="8">
       <div class="section-divider ${resolvedCollapsed ? 'collapsed' : ''}" onclick="toggleResolved(this)">
-        <span class="chevron">▼</span> 已解除列管 / Done (${resolved.length} 筆)
+        <span class="chevron">▼</span> ${customLabels['解除列管'] || '已解除列管'} (${resolved.length} 筆)
       </div>
     </td>`;
     tbody.appendChild(div);
@@ -448,11 +496,16 @@ function renderRow(item, tbody) {
   const pct = item.progress;
   const fillClass = pct < 30 ? 'low' : pct < 70 ? 'mid' : 'high';
 
-  let tsBadge = item.track_status === '解除列管' ? `<span class="status-badge resolved">解除列管</span>` : 
-                (isOverdue ? `<span class="status-badge overdue">繼續追蹤</span>` : `<span class="status-badge continue">繼續追蹤</span>`);
+  // 追蹤狀態標籤 (加入 onclick 修改慣用語功能)
+  const tsClass = item.track_status === '解除列管' ? 'resolved' : (isOverdue ? 'overdue' : 'continue');
+  const tsLabel = customLabels[item.track_status] || item.track_status;
+  const tsBadge = `<span class="status-badge ${tsClass}" onclick="renameLabel('${item.track_status}')" title="點擊修改自訂術語">${tsLabel}</span>`;
 
+  // 辦理流程標籤 (加入 onclick 修改慣用語功能)
   const wfMap = { '草稿': 'draft', '修改中': 'review', '已覆核': 'approved' };
-  const wfBadge = `<span class="wf-badge ${wfMap[item.workflow_status] || 'draft'}">${item.workflow_status}</span>`;
+  const wfClass = wfMap[item.workflow_status] || 'draft';
+  const wfLabel = customLabels[item.workflow_status] || item.workflow_status;
+  const wfBadge = `<span class="wf-badge ${wfClass}" onclick="renameLabel('${item.workflow_status}')" title="點擊修改自訂術語">${wfLabel}</span>`;
 
   let trackDateHtml = '<span class="track-date none">—</span>';
   if (item.next_track_date) {
@@ -463,7 +516,7 @@ function renderRow(item, tbody) {
 
   const typeBadge = item.type === '專案' ? `<span class="type-badge project">📌 協作專案</span>` : `<span class="type-badge routine">🔁 個人作業</span>`;
 
-  let actions = `<button class="btn btn-ghost btn-sm" onclick="toggleExpand('${item.id}')" data-tip="展開詳情">🔍 詳情</button>`;
+  let actions = `<button class="btn btn-ghost btn-sm" onclick="toggleExpand('${item.id}')">🔍 詳情</button>`;
 
   const tr = document.createElement('tr');
   tr.className = rowClass;
@@ -472,7 +525,7 @@ function renderRow(item, tbody) {
     <td>${typeBadge}</td>
     <td>
       <div class="item-title">${item.title}</div>
-      <div class="item-subtitle">${item.detail_text.split('\n')[1]}</div>
+      <div class="item-subtitle">${item.detail_text.split('\n')[1] || ''}</div>
     </td>
     <td>
       <div class="progress-wrap">
@@ -487,14 +540,37 @@ function renderRow(item, tbody) {
   `;
   tbody.appendChild(tr);
 
+  // Expanded details content rendering
   if (expandedIds.has(item.id)) {
+    const renderSubtasks = (subs) => {
+      if (!subs || subs.length === 0) return '<div class="detail-text">無子任務</div>';
+      return subs.map(s => `<div class="subtask-item ${s.done ? 'done' : ''}">${s.done ? '✅' : '⬜'} ${s.title}</div>`).join('');
+    };
+    
+    const renderLogs = (logs) => {
+      if (!logs || logs.length === 0) return '<div class="detail-text">無活動紀錄</div>';
+      return logs.map(l => `
+        <div class="log-entry">
+          <div class="log-time">${l.time} - <span class="log-user">${l.user}</span></div>
+          <div class="detail-text">${l.action.replace(/\n/g, '<br>')}</div>
+        </div>
+      `).join('');
+    };
+
     const exp = document.createElement('tr');
     exp.className = 'expanded-row';
     exp.innerHTML = `<td colspan="8">
       <div class="expanded-content">
-        <div class="detail-block">
+        <div class="detail-block" style="grid-column: 1 / 2;">
           <div class="detail-label">協作與標籤資訊</div>
           <div class="detail-text">${item.detail_text}</div>
+          
+          <div class="detail-label" style="margin-top: 16px;">子任務清單</div>
+          <div>${renderSubtasks(item.subtasks)}</div>
+        </div>
+        <div class="detail-block" style="grid-column: 2 / 3;">
+          <div class="detail-label">活動紀錄 (Logs)</div>
+          <div>${renderLogs(item.logs)}</div>
         </div>
       </div>
     </td>`;
@@ -516,5 +592,3 @@ function toggleResolved(el) {
 </script>
 </body>
 </html>
-
-Read Frog
