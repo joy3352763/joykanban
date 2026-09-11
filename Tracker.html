@@ -84,6 +84,11 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 .item-title { font-weight: 500; color: var(--text); line-height: 1.4; }
 .item-subtitle { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
 
+/* 獨立標籤 Chips 樣式 */
+.tags-cell { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag-chip { display: inline-flex; padding: 2px 6px; border-radius: 4px; background: #f1f5f9; color: #475569; font-size: 11px; border: 1px solid #e2e8f0; white-space: nowrap; }
+.tag-chip.empty { background: transparent; border-color: transparent; color: var(--text-3); padding: 0; }
+
 /* Progress & Status */
 .progress-wrap { min-width: 120px; }
 .progress-top { display: flex; justify-content: space-between; margin-bottom: 5px; }
@@ -140,13 +145,13 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 <main class="main">
   <!-- Top bar -->
   <div class="topbar">
-    <div class="topbar-title">團隊專案聚合清單 <span class="version-tag">v1.2.0</span></div>
+    <div class="topbar-title">團隊專案聚合清單 <span class="version-tag">v1.3.0</span></div>
     <div class="topbar-actions">
       <!-- 配置與匯入匯出按鈕 -->
-      <button class="btn btn-ghost" onclick="exportConfig()" title="匯出您的資料與自訂標籤慣用語">📥 產出配置 JSON</button>
+      <button class="btn btn-ghost" onclick="exportConfig()" title="匯出您的介面自訂標籤設定">📥 產出配置 JSON</button>
       
       <input type="file" id="config-upload" accept=".json" onchange="importConfig(event)" style="display: none;">
-      <button class="btn btn-ghost" onclick="document.getElementById('config-upload').click()">📤 匯入配置 JSON</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('config-upload').click()" title="載入介面自訂標籤設定">📤 匯入配置 JSON</button>
       
       <input type="file" id="multi-upload" multiple accept=".json" onchange="handleTeamUpload(event)" style="display: none;">
       <button class="btn btn-primary" onclick="document.getElementById('multi-upload').click()">📂 匯入團隊 JSON</button>
@@ -177,7 +182,7 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
   <div class="filter-bar">
     <div class="search-wrap">
       <span class="icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="搜尋事項說明、主責人員…" oninput="debouncedFilter()">
+      <input type="text" id="searchInput" placeholder="搜尋事項說明、標籤、主責人員…" oninput="debouncedFilter()">
     </div>
     <select id="filterType" class="filter-select" onchange="applyFilter()">
       <option value="">全部類型</option>
@@ -202,6 +207,7 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
             <th>識別碼</th>
             <th>類型</th>
             <th>事項說明</th>
+            <th>標籤</th>
             <th class="sortable" onclick="sortBy('progress')">進度 <span class="sort-icon">↕</span></th>
             <th>辦理流程</th>
             <th>追蹤狀態</th>
@@ -210,9 +216,9 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
           </tr>
         </thead>
         <tbody id="tableBody">
-            <tr><td colspan="8">
+            <tr><td colspan="9">
                 <div class="empty-state">
-                  <div class="icon">📂</div><p>請點擊右上方「匯入團隊 JSON」載入原始資料，或「匯入配置 JSON」載入上次狀態</p>
+                  <div class="icon">📂</div><p>請點擊右上方「匯入團隊 JSON」載入事項進度資料</p>
                 </div>
             </td></tr>
         </tbody>
@@ -247,8 +253,8 @@ function renameLabel(originalKey) {
   
   if (newText !== null && newText.trim() !== '') {
     customLabels[originalKey] = newText.trim();
-    updateFilterOptionsUI(); // 更新下拉選單的文字
-    renderTable(); // 重新渲染表格套用新文字
+    updateFilterOptionsUI(); 
+    renderTable(); 
   }
 }
 
@@ -264,23 +270,18 @@ function updateFilterOptionsUI() {
   }
 }
 
-// ── 匯出與匯入配置 JSON ──────────────────────────────────────────────
+// ── 匯出與匯入配置 JSON (純介面設定，不包含專案資料) ───────────────────
 function exportConfig() {
-  if (CURRENT_ITEMS.length === 0) {
-    alert("目前沒有資料可以產出！");
-    return;
-  }
-  // 將資料與使用者的自訂標籤習慣一起打包
+  // 只匯出介面標籤設定
   const configPayload = {
-    version: "1.2.0",
-    labels: customLabels,
-    items: CURRENT_ITEMS
+    version: "1.3.0",
+    labels: customLabels
   };
   
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(configPayload, null, 2));
   const downloadAnchorNode = document.createElement('a');
   downloadAnchorNode.setAttribute("href", dataStr);
-  downloadAnchorNode.setAttribute("download", "tracker_config.json");
+  downloadAnchorNode.setAttribute("download", "tracker_ui_config.json");
   document.body.appendChild(downloadAnchorNode);
   downloadAnchorNode.click();
   downloadAnchorNode.remove();
@@ -293,21 +294,18 @@ async function importConfig(event) {
     const text = await file.text();
     const data = JSON.parse(text);
     
-    // 支援舊版純陣列，或新版包含標籤設定的物件
-    if (Array.isArray(data)) {
-      CURRENT_ITEMS = data;
-    } else if (data.items) {
-      CURRENT_ITEMS = data.items;
-      if (data.labels) {
-        customLabels = { ...customLabels, ...data.labels };
-        updateFilterOptionsUI();
-      }
+    // 只讀取 labels 設定，絕對不覆蓋 CURRENT_ITEMS (專案進度)
+    if (data.labels) {
+      customLabels = { ...customLabels, ...data.labels };
+      updateFilterOptionsUI();
+      renderTable(); // 重新渲染表格，套用新標籤文字
+      alert("成功載入介面配置！自訂標籤慣用語已更新。");
+    } else if (Array.isArray(data) || data.items) {
+      // 防呆：如果使用者不小心選錯檔案，選到包含專案資料的舊版配置檔
+      alert("此檔案似乎包含專案進度資料，請使用「匯入團隊 JSON」載入事項進度。\n目前僅能透過配置 JSON 載入自訂標籤。");
     } else {
-      alert("配置檔格式錯誤！");
-      return;
+      alert("配置檔格式錯誤，找不到介面標籤設定！");
     }
-    applyFilter();
-    alert(`成功載入配置，共 ${CURRENT_ITEMS.length} 筆追蹤項目！\n自訂標籤慣用語已同步恢復。`);
   } catch (err) {
     console.error("配置解析失敗:", err);
     alert("讀取設定檔失敗。");
@@ -376,7 +374,8 @@ function processAndMergeTasks(rawTasks) {
       type: t.isCollaborative ? '專案' : '日常作業',
       workflow_status: t.columnStatus === 'Backlog' ? '草稿' : (t.columnStatus === 'In Progress' ? '修改中' : '已覆核'),
       title: t.title || '未命名任務',
-      detail_text: `【檔案提供者】 ${t.fileOwner}\n【主責人員】 ${t.primaryOwner || t.fileOwner} \n【備援人員】 ${t.backupOwner || '無'}\n【標籤】 ${t.tags && t.tags.length ? t.tags.join(', ') : '無'}`,
+      detail_text: `【檔案提供者】 ${t.fileOwner}\n【主責人員】 ${t.primaryOwner || t.fileOwner} \n【備援人員】 ${t.backupOwner || '無'}`,
+      tags: t.tags || [], 
       subtasks: t.subtasks || [],
       logs: t.logs || [],
       progress: t.progressPct,
@@ -424,7 +423,8 @@ function applyFilter() {
   const wf = document.getElementById('filterWf').value;
   
   filteredItems = CURRENT_ITEMS.filter(item => {
-    if (q && !item.title.toLowerCase().includes(q) && !item.detail_text.toLowerCase().includes(q)) return false;
+    const tagsString = item.tags ? item.tags.join(',') : '';
+    if (q && !item.title.toLowerCase().includes(q) && !item.detail_text.toLowerCase().includes(q) && !tagsString.toLowerCase().includes(q)) return false;
     if (type && item.type !== type) return false;
     if (wf && item.workflow_status !== wf) return false;
     return true;
@@ -464,8 +464,8 @@ function renderTable() {
   tbody.innerHTML = '';
 
   if (active.length === 0 && resolved.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
-      <div class="icon">📭</div><p>找不到符合條件的項目，或尚未匯入資料</p>
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">
+      <div class="icon">📭</div><p>找不到符合條件的項目，或尚未匯入團隊資料</p>
     </div></td></tr>`;
     return;
   }
@@ -474,7 +474,7 @@ function renderTable() {
 
   if (resolved.length > 0) {
     const div = document.createElement('tr');
-    div.innerHTML = `<td colspan="8">
+    div.innerHTML = `<td colspan="9">
       <div class="section-divider ${resolvedCollapsed ? 'collapsed' : ''}" onclick="toggleResolved(this)">
         <span class="chevron">▼</span> ${customLabels['解除列管'] || '已解除列管'} (${resolved.length} 筆)
       </div>
@@ -496,12 +496,14 @@ function renderRow(item, tbody) {
   const pct = item.progress;
   const fillClass = pct < 30 ? 'low' : pct < 70 ? 'mid' : 'high';
 
-  // 追蹤狀態標籤 (加入 onclick 修改慣用語功能)
+  const tagsHtml = item.tags && item.tags.length > 0 
+    ? `<div class="tags-cell">${item.tags.map(tag => `<span class="tag-chip">${tag}</span>`).join('')}</div>`
+    : `<div class="tags-cell"><span class="tag-chip empty">—</span></div>`;
+
   const tsClass = item.track_status === '解除列管' ? 'resolved' : (isOverdue ? 'overdue' : 'continue');
   const tsLabel = customLabels[item.track_status] || item.track_status;
   const tsBadge = `<span class="status-badge ${tsClass}" onclick="renameLabel('${item.track_status}')" title="點擊修改自訂術語">${tsLabel}</span>`;
 
-  // 辦理流程標籤 (加入 onclick 修改慣用語功能)
   const wfMap = { '草稿': 'draft', '修改中': 'review', '已覆核': 'approved' };
   const wfClass = wfMap[item.workflow_status] || 'draft';
   const wfLabel = customLabels[item.workflow_status] || item.workflow_status;
@@ -527,6 +529,7 @@ function renderRow(item, tbody) {
       <div class="item-title">${item.title}</div>
       <div class="item-subtitle">${item.detail_text.split('\n')[1] || ''}</div>
     </td>
+    <td>${tagsHtml}</td>
     <td>
       <div class="progress-wrap">
         <div class="progress-top"><span class="progress-pct">${pct}%</span></div>
@@ -540,7 +543,6 @@ function renderRow(item, tbody) {
   `;
   tbody.appendChild(tr);
 
-  // Expanded details content rendering
   if (expandedIds.has(item.id)) {
     const renderSubtasks = (subs) => {
       if (!subs || subs.length === 0) return '<div class="detail-text">無子任務</div>';
@@ -559,10 +561,10 @@ function renderRow(item, tbody) {
 
     const exp = document.createElement('tr');
     exp.className = 'expanded-row';
-    exp.innerHTML = `<td colspan="8">
+    exp.innerHTML = `<td colspan="9">
       <div class="expanded-content">
         <div class="detail-block" style="grid-column: 1 / 2;">
-          <div class="detail-label">協作與標籤資訊</div>
+          <div class="detail-label">協作資訊</div>
           <div class="detail-text">${item.detail_text}</div>
           
           <div class="detail-label" style="margin-top: 16px;">子任務清單</div>
