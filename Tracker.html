@@ -33,10 +33,10 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: va
 
 /* ── Main layout ── */
 .main { flex: 1; display: flex; flex-direction: column; min-height: 100vh; width: 100%; }
-.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; height: 56px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 90; }
-.topbar-title { font-size: 16px; font-weight: 600; color: var(--text); flex: 1; display: flex; align-items: center; gap: 8px; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: 0; z-index: 90; }
+.topbar-title { font-size: 16px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .version-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; }
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; transition: all .15s; border: none; white-space: nowrap; }
 .btn-primary { background: var(--accent); color: white; }
@@ -66,9 +66,9 @@ select.filter-select { padding: 8px 12px; border: 1px solid var(--border); borde
 select.filter-select:focus { outline: none; border-color: var(--accent); }
 
 /* Table */
-.table-wrap { padding: 0 28px 28px; flex: 1; }
-.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-table { width: 100%; border-collapse: collapse; }
+.table-wrap { padding: 0 28px 28px; flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; min-width: 800px; }
 thead { background: #f8f8f6; }
 th { padding: 11px 14px; text-align: left; font-size: 11.5px; font-weight: 600; color: var(--text-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
 th.sortable { cursor: pointer; user-select: none; }
@@ -78,7 +78,7 @@ tbody tr:hover { background: #fafaf8; }
 tbody tr.overdue td:first-child { border-left: 3px solid var(--danger); }
 tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 .seq-no { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-3); font-weight: 500; }
-.type-badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+.type-badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .type-badge.project { background: #eff6ff; color: #1d4ed8; }
 .type-badge.routine { background: #f0fdf4; color: #15803d; }
 .item-title { font-weight: 500; color: var(--text); line-height: 1.4; }
@@ -99,8 +99,8 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 .progress-fill.mid { background: var(--warn); }
 .progress-fill.high { background: var(--ok); }
 
-/* Badges - 恢復為純顯示，並加入點擊修改的提示與效果 */
-.status-badge, .wf-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
+/* Badges */
+.status-badge, .wf-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; }
 .status-badge:hover, .wf-badge:hover { opacity: 0.7; }
 .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
 
@@ -114,7 +114,7 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 .wf-badge.approved { background: var(--ok-bg); color: var(--ok); border: 1px solid #a7f3d0; }
 .wf-badge.returned { background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
 
-.track-date { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-2); }
+.track-date { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-2); white-space: nowrap; }
 .track-date.overdue { color: var(--danger); font-weight: 600; }
 .track-date.soon { color: var(--warn); font-weight: 600; }
 .actions { display: flex; gap: 6px; }
@@ -126,18 +126,46 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 .detail-label { font-size: 12px; font-weight: 600; color: var(--text-3); margin-bottom: 8px; border-bottom: 1px solid #f0f0ec; padding-bottom: 6px; }
 .detail-text { font-size: 13px; line-height: 1.6; color: var(--text-2); white-space: pre-wrap; }
 .log-entry { margin-bottom: 8px; font-size: 12.5px; border-left: 2px solid var(--border); padding-left: 8px; }
-.log-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); }
+.log-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); display: block; margin-bottom: 2px;}
 .log-user { font-weight: 600; color: var(--text); }
-.subtask-item { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
+.subtask-item { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px; font-size: 13px;}
 .subtask-item.done { color: var(--ok); text-decoration: line-through; opacity: 0.7; }
 
 .empty-state { text-align: center; padding: 60px 20px; }
 .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
 .empty-state p { color: var(--text-3); font-size: 14px; }
 .section-divider { padding: 8px 14px; background: #f8f7f4; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--text-3); cursor: pointer; }
+
+/* ── 卷軸美化 ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+
+/* ── Mobile 版面支援 (RWD) ── */
+@media (max-width: 900px) {
+  .expanded-content { grid-template-columns: 1fr; gap: 16px; } /* 平板尺寸下，詳情面板改為單欄上下排列 */
+  .detail-block { grid-column: 1 / -1 !important; }
+}
+
+@media (max-width: 768px) {
+  .topbar { padding: 12px 16px; height: auto; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .topbar-actions { width: 100%; justify-content: flex-start; }
+  
+  .stats-bar { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat-card { padding: 12px; flex-direction: column; align-items: flex-start; gap: 8px; }
+  
+  .filter-bar { padding: 0 16px 16px; flex-direction: column; align-items: stretch; gap: 8px; }
+  .search-wrap { width: 100%; min-width: unset; }
+  .filter-select { width: 100%; }
+  
+  .table-wrap { padding: 0 16px 28px; }
+  th, td { padding: 10px; }
+}
+
+@media (max-width: 480px) {
+  .stats-bar { grid-template-columns: 1fr; } /* 手機直向尺寸下，統計卡片改為單欄排列 */
+  .btn { width: 100%; justify-content: center; } /* 手機上的按鈕滿版以便點擊 */
+}
 </style>
 </head>
 <body>
@@ -145,13 +173,13 @@ tbody tr.soon td:first-child { border-left: 3px solid var(--warn); }
 <main class="main">
   <!-- Top bar -->
   <div class="topbar">
-    <div class="topbar-title">團隊專案聚合清單 <span class="version-tag">v1.3.0</span></div>
+    <div class="topbar-title">團隊專案聚合清單 <span class="version-tag">v1.3.1</span></div>
     <div class="topbar-actions">
       <!-- 配置與匯入匯出按鈕 -->
-      <button class="btn btn-ghost" onclick="exportConfig()" title="匯出您的介面自訂標籤設定">📥 產出配置 JSON</button>
+      <button class="btn btn-ghost" onclick="exportConfig()" title="匯出您的介面自訂標籤設定">📥 產出配置</button>
       
       <input type="file" id="config-upload" accept=".json" onchange="importConfig(event)" style="display: none;">
-      <button class="btn btn-ghost" onclick="document.getElementById('config-upload').click()" title="載入介面自訂標籤設定">📤 匯入配置 JSON</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('config-upload').click()" title="載入介面自訂標籤設定">📤 匯入配置</button>
       
       <input type="file" id="multi-upload" multiple accept=".json" onchange="handleTeamUpload(event)" style="display: none;">
       <button class="btn btn-primary" onclick="document.getElementById('multi-upload').click()">📂 匯入團隊 JSON</button>
@@ -272,9 +300,8 @@ function updateFilterOptionsUI() {
 
 // ── 匯出與匯入配置 JSON (純介面設定，不包含專案資料) ───────────────────
 function exportConfig() {
-  // 只匯出介面標籤設定
   const configPayload = {
-    version: "1.3.0",
+    version: "1.3.1",
     labels: customLabels
   };
   
@@ -294,14 +321,12 @@ async function importConfig(event) {
     const text = await file.text();
     const data = JSON.parse(text);
     
-    // 只讀取 labels 設定，絕對不覆蓋 CURRENT_ITEMS (專案進度)
     if (data.labels) {
       customLabels = { ...customLabels, ...data.labels };
       updateFilterOptionsUI();
-      renderTable(); // 重新渲染表格，套用新標籤文字
+      renderTable();
       alert("成功載入介面配置！自訂標籤慣用語已更新。");
     } else if (Array.isArray(data) || data.items) {
-      // 防呆：如果使用者不小心選錯檔案，選到包含專案資料的舊版配置檔
       alert("此檔案似乎包含專案進度資料，請使用「匯入團隊 JSON」載入事項進度。\n目前僅能透過配置 JSON 載入自訂標籤。");
     } else {
       alert("配置檔格式錯誤，找不到介面標籤設定！");
@@ -553,7 +578,7 @@ function renderRow(item, tbody) {
       if (!logs || logs.length === 0) return '<div class="detail-text">無活動紀錄</div>';
       return logs.map(l => `
         <div class="log-entry">
-          <div class="log-time">${l.time} - <span class="log-user">${l.user}</span></div>
+          <span class="log-time">${l.time} - <span class="log-user">${l.user}</span></span>
           <div class="detail-text">${l.action.replace(/\n/g, '<br>')}</div>
         </div>
       `).join('');
