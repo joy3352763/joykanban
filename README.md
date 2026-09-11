@@ -9,7 +9,7 @@
 
 
 
-團隊追蹤介面 :: https://joy3352763.github.io/joykanban/tracker.html
+團隊追蹤介面 :: https://joy3352763.github.io/joykanban/Tracker.html
 <img width="1814" height="933" alt="image" src="https://github.com/user-attachments/assets/76515a05-40bb-4b0b-8d0c-f80bfb69fff2" />
 可匯入多人的json一起看進度
 
